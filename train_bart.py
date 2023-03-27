@@ -10,7 +10,7 @@ import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
 from models import TranslationModel
-from dataset import BartDataset
+from dataset import TranslationDataset
 from config_bart import Config
 from losses import CE
 

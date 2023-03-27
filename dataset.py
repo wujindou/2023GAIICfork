@@ -53,32 +53,3 @@ class TranslationDataset(BaseDataset):
         if len(target)<self.output_l:
             target.extend([self.pad_id] * (self.output_l-len(target)))
         return np.array(source)[:self.input_l], np.array(target)[:self.output_l]
-
-class BartDataset(BaseDataset):
-    def __init__(self, data_file, input_l, output_l, sos_id=1, eos_id=2, pad_id=0):
-        with open(data_file, 'r') as fp:
-            reader = csv.reader(fp)
-            self.samples = [row for row in reader]
-            self.input_l = input_l
-            self.output_l = output_l
-            self.sos_id = sos_id
-            self.pad_id = pad_id
-            self.eos_id = eos_id
-            self.tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
-    def __len__(self):
-        return len(self.samples)
-    def _try_getitem(self, idx):
-        source = [int(x) for x in self.samples[idx][1].split()]
-        # if len(source)<self.input_l:
-        #     source.extend([self.pad_id] * (self.input_l-len(source)))
-
-        if len(self.samples[idx])<3:
-            raise("samples too small")
-
-        target = [int(x) for x in self.samples[idx][2].split()]
-        # if len(target)<self.output_l:
-        #     target.extend([self.pad_id] * (self.output_l-len(target)))
-        source, target = np.array(source)[:self.input_l], np.array(target)[:self.output_l]
-        encoded_source = self.tokenizer(source, padding=True, truncation=True, return_tensors="pt")
-        encoded_target = self.tokenizer(target, padding=True, truncation=True, return_tensors="pt")
-        return encoded_source, encoded_target

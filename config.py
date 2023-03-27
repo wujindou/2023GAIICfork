@@ -16,7 +16,7 @@ class Config(dict):
     
         self['input_l'] = 150
         self['output_l'] = 80
-        self['n_token'] = 2000
+        self['n_token'] = 1500
         self['sos_id'] = 1
         self['eos_id'] = 2
         self['pad_id'] = 0

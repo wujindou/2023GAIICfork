@@ -1,0 +1,60 @@
+
+epoch 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 160/160 [01:13<00:00,  2.18it/s]
+  0%|                                                                                                                                                 | 0/40 [00:03<?, ?it/s]
+Traceback (most recent call last):
+  File "train.py", line 180, in <module>
+    train()
+  File "train.py", line 141, in train
+    metrics = evaluate(model, valid_loader)
+  File "train.py", line 55, in evaluate
+    pred = model(source, beam=beam)
+  File "/root/miniconda3/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/root/miniconda3/lib/python3.8/site-packages/torch/nn/parallel/data_parallel.py", line 166, in forward
+    return self.module(*inputs[0], **kwargs[0])
+  File "/root/miniconda3/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/root/2023GAIIC/models.py", line 18, in forward
+    return self.decoder(feature, caption=None, top_k=beam)
+  File "/root/miniconda3/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/root/2023GAIIC/models.py", line 74, in forward
+    return self._infer(source=source, top_k=top_k, eos_id=eos_id, mode=mode) # (B,l)
+  File "/root/2023GAIIC/models.py", line 111, in _infer
+    if torch.sum(not_over)==0:
+KeyboardInterrupt

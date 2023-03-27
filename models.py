@@ -63,6 +63,7 @@ class Decoder(nn.Module):
         
         if n_token is not None:
             self.output = nn.Linear(d, n_token)
+            self.dropout = nn.Dropout(p=0.2)
             self.output.weight = self.token_embedding.weight
             
     def forward(self, source, caption, top_k=1, eos_id=2, mode='greedy'):
@@ -89,6 +90,7 @@ class Decoder(nn.Module):
         out = self.transformer_decoder(tgt=target_embed, memory=source_embed, tgt_mask=attn_mask, tgt_key_padding_mask=padding_mask)
 
         out = torch.transpose(out, -2, -3) #[B, L, E]
+        out = self.dropout(out)
         out = self.output(out) #[B, L, n_token]
         return out
 

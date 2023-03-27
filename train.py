@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -16,7 +15,12 @@ from config import Config
 from losses import CE
 
 from evaluate import CiderD
+import wandb
 
+wandb.init(
+        project="2023GAIIC",
+        name="baseline",
+)
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')
@@ -82,6 +86,8 @@ def train():
     model.to('cuda:0')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.5)
+
     start_epoch = 0
     
     train_loss = Smoother(100)
@@ -125,15 +131,21 @@ def train():
                 logger.log(step.value, train_loss.value())
                 logger.log(array2str(targets[0].cpu().numpy()))
                 logger.log(array2str(torch.argmax(pred[0], 1).cpu().numpy()))
+                wandb.log({'step': step.value})
+                wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch%3==0:
+        if epoch%6==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
             logger.log('valid', step.value, metrics.value())
+            wandb.log({'valid_metric': metrics.value()})
             writer.add_scalars('valid metric', metrics.value(), step.value)
             checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
             model.train()
+
+        # scheduler.step()
+        wandb.log({'epoch': epoch})
         ema.restore()
     logger.close()
     writer.close()
@@ -165,5 +177,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-train()
+# train()
 inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

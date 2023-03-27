@@ -1,0 +1,33 @@
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_setup.py:_flush():68] Configure stats pid to 182514
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_setup.py:_flush():68] Loading settings from /root/.config/wandb/settings
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_setup.py:_flush():68] Loading settings from /root/2023GAIIC/wandb/settings
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_setup.py:_flush():68] Loading settings from environment variables: {'_require_service': 'True'}
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_setup.py:_flush():68] Inferring run settings from compute environment: {'program_relpath': 'test.py', 'program': 'test.py'}
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_init.py:_log_setup():492] Logging user logs to /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/logs/debug.log
+2023-03-28 04:54:56,068 INFO    MainThread:182514 [wandb_init.py:_log_setup():493] Logging internal logs to /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/logs/debug-internal.log
+2023-03-28 04:54:56,069 INFO    MainThread:182514 [wandb_init.py:init():532] calling init triggers
+2023-03-28 04:54:56,069 INFO    MainThread:182514 [wandb_init.py:init():538] wandb.init called with sweep_config: {}
+config: {}
+2023-03-28 04:54:56,069 INFO    MainThread:182514 [wandb_init.py:init():588] starting backend
+2023-03-28 04:54:56,069 INFO    MainThread:182514 [wandb_init.py:init():592] setting up manager
+2023-03-28 04:54:56,073 INFO    MainThread:182514 [backend.py:_multiprocessing_setup():106] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2023-03-28 04:54:56,076 INFO    MainThread:182514 [wandb_init.py:init():599] backend started and connected
+2023-03-28 04:54:56,078 INFO    MainThread:182514 [wandb_init.py:init():687] updated telemetry
+2023-03-28 04:54:56,100 INFO    MainThread:182514 [wandb_init.py:init():727] communicating run to backend with 60.0 second timeout
+2023-03-28 04:54:57,440 WARNING MainThread:182514 [wandb_init.py:init():1154] interrupted
+Traceback (most recent call last):
+  File "/root/miniconda3/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 1133, in init
+    run = wi.init()
+  File "/root/miniconda3/lib/python3.8/site-packages/wandb/sdk/wandb_init.py", line 730, in init
+    result = run_init_handle.wait(
+  File "/root/miniconda3/lib/python3.8/site-packages/wandb/sdk/lib/mailbox.py", line 273, in wait
+    found, abandoned = self._slot._get_and_clear(timeout=wait_timeout)
+  File "/root/miniconda3/lib/python3.8/site-packages/wandb/sdk/lib/mailbox.py", line 120, in _get_and_clear
+    if self._wait(timeout=timeout):
+  File "/root/miniconda3/lib/python3.8/site-packages/wandb/sdk/lib/mailbox.py", line 116, in _wait
+    return self._event.wait(timeout=timeout)
+  File "/root/miniconda3/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/root/miniconda3/lib/python3.8/threading.py", line 306, in wait
+    gotit = waiter.acquire(True, timeout)
+KeyboardInterrupt

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "train_bart.py", line 180, in <module>
+    conf = Config(version)
+  File "/root/2023GAIIC/config_bart.py", line 31, in __init__
+    self.version_config(version)
+  File "/root/2023GAIIC/config_bart.py", line 6, in version_config
+    self['n_epoch'] = hp[version].get('n_epoch', 10)
+KeyError: 2

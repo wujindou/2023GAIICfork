@@ -1,0 +1,17 @@
+2023-03-28 04:54:56,077 INFO    StreamThr :182534 [internal.py:wandb_internal():87] W&B internal server running at pid: 182534, started at: 2023-03-28 04:54:56.077240
+2023-03-28 04:54:56,081 DEBUG   HandlerThread:182534 [handler.py:handle_request():144] handle_request: status
+2023-03-28 04:54:56,084 INFO    WriterThread:182534 [datastore.py:open_for_write():85] open: /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/run-pbtnb9sw.wandb
+2023-03-28 04:54:56,085 DEBUG   SenderThread:182534 [sender.py:send():336] send: header
+2023-03-28 04:54:56,102 DEBUG   SenderThread:182534 [sender.py:send():336] send: run
+2023-03-28 04:54:57,447 DEBUG   HandlerThread:182534 [handler.py:handle_request():144] handle_request: shutdown
+2023-03-28 04:54:57,447 INFO    HandlerThread:182534 [handler.py:finish():841] shutting down handler
+2023-03-28 04:54:58,103 INFO    WriterThread:182534 [datastore.py:close():299] close: /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/run-pbtnb9sw.wandb
+2023-03-28 04:54:58,379 INFO    SenderThread:182534 [dir_watcher.py:__init__():216] watching files in: /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/files
+2023-03-28 04:54:58,380 INFO    SenderThread:182534 [sender.py:_start_run_threads():1067] run started: pbtnb9sw with start time 1679950496.076382
+2023-03-28 04:54:58,380 INFO    SenderThread:182534 [sender.py:finish():1493] shutting down sender
+2023-03-28 04:54:58,380 INFO    SenderThread:182534 [dir_watcher.py:finish():362] shutting down directory watcher
+2023-03-28 04:54:59,380 INFO    SenderThread:182534 [dir_watcher.py:finish():392] scan: /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/files
+2023-03-28 04:54:59,380 INFO    SenderThread:182534 [dir_watcher.py:finish():406] scan save: /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/files/config.yaml config.yaml
+2023-03-28 04:54:59,380 INFO    SenderThread:182534 [file_pusher.py:finish():162] shutting down file pusher
+2023-03-28 04:54:59,381 INFO    SenderThread:182534 [file_pusher.py:join():167] waiting for file pusher
+2023-03-28 04:55:13,274 INFO    wandb-upload_0:182534 [upload_job.py:push():138] Uploaded file /root/2023GAIIC/wandb/run-20230328_045456-pbtnb9sw/files/config.yaml

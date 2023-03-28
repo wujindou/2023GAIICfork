@@ -1,4 +1,5 @@
 __pycache__/
+.idea/
 *.pth
 *.trt
 *.bin
@@ -7,3 +8,5 @@ __pycache__/
 *.un~
 .DS_Store
 wandb/
+checkpoint
+data

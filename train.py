@@ -27,6 +27,8 @@ def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     targets = to_device(targets, 'cuda:0')
     losses = {}
     pred = model(source[:, :conf['input_l']], targets[:, :conf['output_l']])
+    print(pred.shape)
+    print(targets.shape)
     losses['loss_g'] = CE(pred[:, :-1], targets[:, 1:])
     return losses, pred
 
@@ -177,5 +179,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-# train()
-inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+train()
+# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

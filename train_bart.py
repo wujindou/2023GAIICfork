@@ -9,7 +9,7 @@ import json
 import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
-from models import TranslationModel
+from models_bart import TranslationModel
 from dataset import TranslationDataset
 from config_bart import Config
 from losses import CE
@@ -17,7 +17,7 @@ from losses import CE
 from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
-import wandb
+# import wandb
 
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
@@ -62,14 +62,13 @@ def evaluate(model, loader, output_file=None, beam=1, n=-1):
     print(metrics.value())
     return metrics
 
-
 def get_model():
-    # return TranslationModel(conf['input_l'], conf['output_l'], conf['n_token'], encoder_layer=conf['n_layer'], decoder_layer=conf['n_layer'])
-    return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
+    return TranslationModel(conf['n_token'])
+    # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
-    train_data = BartDataset(conf['train_file'], conf['input_l'], conf['output_l'])
-    valid_data = BartDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
+    train_data = TranslationDataset(conf['train_file'], conf['input_l'], conf['output_l'])
+    valid_data = TranslationDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
 
     train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
     valid_loader = DataLoader(valid_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
@@ -129,21 +128,21 @@ def train():
                 logger.log(step.value, train_loss.value())
                 logger.log(array2str(targets[0].cpu().numpy()))
                 logger.log(array2str(torch.argmax(pred[0], 1).cpu().numpy()))
-                wandb.log({'step': step.value})
-                wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
+                # wandb.log({'step': step.value})
+                # wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
         if epoch%6==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
             logger.log('valid', step.value, metrics.value())
-            wandb.log({'valid_metric': metrics.value()})
+            # wandb.log({'valid_metric': metrics.value()})
             writer.add_scalars('valid metric', metrics.value(), step.value)
             checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
             model.train()
 
         # scheduler.step()
-        wandb.log({'epoch': epoch})
+        # wandb.log({'epoch': epoch})
         ema.restore()
     logger.close()
     writer.close()
@@ -172,13 +171,13 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
-wandb.init(
-        project="2023GAIIC",
-        name="bart",
-)
+# wandb.init(
+#         project="2023GAIIC",
+#         name="bart",
+# )
 
 train()
-inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

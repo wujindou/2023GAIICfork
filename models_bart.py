@@ -16,7 +16,6 @@ class TranslationModel(nn.Module):
         self.eos_id = eos_id
         self.output_l = output_l
         config = BartConfig.from_pretrained('facebook/bart-base')
-        self.bart = BartForConditionalGeneration(config)
         if n_token is not None:
             self.output = nn.Linear(d, n_token)
             self.dropout = nn.Dropout(p=0.2)
@@ -29,7 +28,6 @@ class TranslationModel(nn.Module):
 
         if outputs is None:
             output = self.generate(inputs, max_length=self.output_l)
-            print(output)
             return output
 
         decoder_attn_mask = torch.full((outputs.shape[0], outputs.shape[1]), 1.0).to(inputs.device)
@@ -44,7 +42,8 @@ class TranslationModel(nn.Module):
         inputs = inputs.to(self.bart.device)
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(0)] = 0.0
-        print(inputs.shape)
-        for idx in range(inputs.shape[0]):
-            outputs = self.bart.generate(input_ids=inputs[idx].unsqueeze(0), attention_mask=attn_mask[idx].unsqueeze(0), max_length=max_length, eos_token_id=self.eos_id, pad_token_id=self.pad_id, bos_token_id=self.sos_id)
+        # for idx in range(inputs.shape[0]):
+        #     outputs = self.bart.generate(input_ids=inputs[idx].unsqueeze(0), attention_mask=attn_mask[idx].unsqueeze(0), max_length=max_length, eos_token_id=self.eos_id, pad_token_id=self.pad_id, bos_token_id=self.sos_id)
+        outputs = self.bart.generate(input_ids=inputs, attention_mask=attn_mask, max_length=max_length, eos_token_id=self.eos_id, pad_token_id=self.pad_id, bos_token_id=self.sos_id, early_stopping=True, num_beams=1)
+        print(outputs)
         return outputs

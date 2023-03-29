@@ -17,7 +17,7 @@ from losses import CE
 from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
-# import wandb
+import wandb
 
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
@@ -41,7 +41,7 @@ def array2str(arr):
     return out.strip()
 
 
-def evaluate(model, loader, output_file=None, beam=1, n=-1):
+def evaluate(model, loader, output_file=None, n=-1):
     metrics = Smoother(100)
     res, gts = [], {}
     tot = 0
@@ -49,9 +49,8 @@ def evaluate(model, loader, output_file=None, beam=1, n=-1):
         if n>0 and tot>n:
             break
         source = to_device(source, 'cuda:0')
-        pred = model(source, beam=beam)
+        pred = model(source)
         pred = pred.cpu().numpy()
-        #print(pred.shape)
         for i in range(pred.shape[0]):
             res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
@@ -63,7 +62,7 @@ def evaluate(model, loader, output_file=None, beam=1, n=-1):
     return metrics
 
 def get_model():
-    return TranslationModel(conf['n_token'])
+    return TranslationModel(conf['n_token'], conf['output_l'])
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
@@ -83,7 +82,7 @@ def train():
     model.to('cuda:0')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
     start_epoch = 0
     
@@ -128,21 +127,21 @@ def train():
                 logger.log(step.value, train_loss.value())
                 logger.log(array2str(targets[0].cpu().numpy()))
                 logger.log(array2str(torch.argmax(pred[0], 1).cpu().numpy()))
-                # wandb.log({'step': step.value})
-                # wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
+                wandb.log({'step': step.value})
+                wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
         if epoch%6==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
             logger.log('valid', step.value, metrics.value())
-            # wandb.log({'valid_metric': metrics.value()})
+            wandb.log({'valid_metric': metrics.value()})
             writer.add_scalars('valid metric', metrics.value(), step.value)
             checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
             model.train()
 
-        # scheduler.step()
-        # wandb.log({'epoch': epoch})
+        scheduler.step()
+        wandb.log({'epoch': epoch})
         ema.restore()
     logger.close()
     writer.close()
@@ -164,7 +163,7 @@ def inference(model_file, data_file):
     tot = 0
     for source in tqdm(test_loader):
         source = to_device(source, 'cuda:0')
-        pred = model(source, beam=1)
+        pred = model(source)
         pred = pred.cpu().numpy()
         for i in range(pred.shape[0]):
             writer.writerow([tot, array2str(pred[i])])
@@ -174,10 +173,10 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-# wandb.init(
-#         project="2023GAIIC",
-#         name="bart",
-# )
+wandb.init(
+        project="2023GAIIC",
+        name="bart",
+)
 
 train()
 # inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

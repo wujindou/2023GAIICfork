@@ -16,7 +16,7 @@ from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
 import wandb
-WANDB = False
+WANDB = True
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')
@@ -53,6 +53,8 @@ def evaluate(model, loader, output_file=None, n=-1):
             res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
             tot += 1
+            print(targets[i])
+            print(pred[i])
     CiderD_scorer = CiderD(df='corpus', sigma=15)
     cider_score, cider_scores = CiderD_scorer.compute_score(gts, res)
     metrics.update(cider = cider_score)

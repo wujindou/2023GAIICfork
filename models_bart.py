@@ -11,7 +11,7 @@ from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, Bar
 
 
 class BartModel(nn.Module):
-    def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2, d=512):
+    def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2, d=1024):
         super().__init__()
         self.pad_id = pad_id
         self.sos_id = sos_id
@@ -34,9 +34,8 @@ class BartModel(nn.Module):
         if outputs is None:
             return self._infer(inputs)
             # return self.generate(inputs, attention_mask=attn_mask, )
-        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True, output_attentions=True)
-
-        out = self.decoder(decoder_input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=feature[2], max_position_embeddings=self.max_l)
+        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
+        out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0])
         out = out.last_hidden_state
         out = self.dropout(out)
         out = self.output(out) #[B, L, n_token]

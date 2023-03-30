@@ -10,19 +10,19 @@ class Config(dict):
         self['w_g'] = 1
 
         #请自己造训练测试集
-        self['train_file'] = 'data/try.csv'
+        self['train_file'] = 'data/train.csv'
         self['valid_file'] = 'data/val.csv'
         self['test_file'] = 'data/preliminary_a_test.csv'
     
         self['input_l'] = 150
         self['output_l'] = 80
-        self['n_token'] = 1500
+        self['n_token'] = 5000
         self['sos_id'] = 1
         self['eos_id'] = 2
         self['pad_id'] = 0
         
     def __init__(self, version, seed=0):
-        self['lr'] = 1e-3
+        self['lr'] = 1e-4
         self['model_dir'] = './checkpoint/%d'%version
         if seed>0:
             self['model_dir'] += '_%d'%seed

@@ -4,8 +4,11 @@ Created on Mon Mar 13 20:05:24 2023
 
 @author: Admin
 """
-import torch.nn as nn
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import gensim
+import math
 
 class TranslationModel(nn.Module):
     def __init__(self, input_l, output_l, n_token, encoder_layer=6, decoder_layer=6, d=512, n_head=8, sos_id=1, pad_id=0):
@@ -23,23 +26,25 @@ class Encoder(nn.Module):
         super().__init__()
         encoder_layer = nn.TransformerEncoderLayer(d_model=d, nhead=n_head)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layer) 
-        self.posit_embedding = nn.Embedding(max_l, d)
+        self.posit_embedding = RoPE(d)
         self.token_embedding = nn.Embedding(n_token, d)
         self.nhead = n_head
         self.pad_id = pad_id
+
     def forward(self, inputs):
-        posit_index = torch.arange(inputs.shape[1]).unsqueeze(0).repeat(inputs.shape[0], 1).to(inputs.device) #(B,S)
-        source_posit_embed = self.posit_embedding(posit_index) 
         padding_mask = (inputs == self.pad_id) 
-        
+    
         inputs = self.token_embedding(inputs) #[B,S,512]
-        
+
+        source_posit_embed = self.posit_embedding(inputs)
         source_embed = inputs + source_posit_embed
+    
         source_embed = torch.transpose(source_embed, 0, 1)
-        attn_mask = torch.full((inputs.shape[1], inputs.shape[1]),0.0).to(inputs.device)
+        attn_mask = torch.full((inputs.shape[1], inputs.shape[1]), 0.0).to(inputs.device)
 
         output = self.transformer_encoder(src=source_embed, mask=attn_mask, src_key_padding_mask=padding_mask) #[S, B, 512]
         output = torch.transpose(output, -2, -3) #[B, S, 512]
+
         return output
     
 class Decoder(nn.Module):
@@ -117,3 +122,25 @@ class Decoder(nn.Module):
     def generate_square_subsequent_mask(self, sz):
         #float mask, -inf无法关注，0可以关注
         return torch.triu(torch.full((sz, sz), float('-inf')), diagonal=1) #1。预测i位置可以用i及之前位置的输入
+
+
+class RoPE(nn.Module):
+    def __init__(self, d_model, max_len=150):
+        super(RoPE, self).__init__()
+        self.d_model = d_model
+        self.max_len = max_len
+
+        # create fixed frequency terms for RoPE
+        self.freqs = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)).to("cuda:0")
+        self.freqs = self.freqs.unsqueeze(0)
+
+    def forward(self, x):
+        # create positions tensor
+        positions = torch.arange(0, x.size(1), device=x.device).float().unsqueeze(1).to("cuda:0")
+
+        # calculate RoPE
+        angles = torch.matmul(positions, self.freqs).to("cuda:0")
+        angles = torch.cat([torch.sin(angles), torch.cos(angles)], dim=-1).to("cuda:0")
+        angles = angles.unsqueeze(0).repeat(x.size(0), 1, 1)
+
+        return angles

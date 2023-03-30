@@ -10,7 +10,7 @@ import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
 from models_bart import TranslationModel
-from dataset import TranslationDataset
+from dataset import BartDataset as TranslationDataset
 from config_bart import Config
 from losses import CE
 
@@ -18,7 +18,7 @@ from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
 import wandb
-WANDB = False
+WANDB = True
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')
@@ -82,7 +82,7 @@ def train():
     model.to('cuda:0')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
     start_epoch = 0
     
@@ -142,7 +142,7 @@ def train():
             checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
             model.train()
 
-        scheduler.step()
+        # scheduler.step()
         if WANDB:
             wandb.log({'epoch': epoch})
         ema.restore()

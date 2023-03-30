@@ -1,16 +1,17 @@
-#! pip install tokenizers
-
-from pathlib import Path
-
 from tokenizers import ByteLevelBPETokenizer
+import csv
+with open("../data/raw.csv",'r') as fp:
+    reader = csv.reader(fp)
+    sample = [row for row in reader]
 
-paths = [str(x) for x in Path("./eo_data/").glob("**/*.txt")]
+samples = []
+for i in sample:
+    samples.append(i[1])
+    samples.append(i[2])
 
-# Initialize a tokenizer
 tokenizer = ByteLevelBPETokenizer()
 
-# Customize training
-tokenizer.train(files=paths, vocab_size=3000, min_frequency=2, special_tokens=[
+tokenizer.train_from_iterator(iterator=samples, vocab_size=5000, min_frequency=2, special_tokens=[
     "<s>",
     "<pad>",
     "</s>",
@@ -18,5 +19,4 @@ tokenizer.train(files=paths, vocab_size=3000, min_frequency=2, special_tokens=[
     "<mask>",
 ])
 
-# Save files to disk
 tokenizer.save_model(".", "custom_bart")

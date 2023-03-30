@@ -7,7 +7,8 @@ Created on Mon Mar 13 20:05:24 2023
 import torch
 import torch.nn as nn
 from transformers import BartConfig
-from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder
+from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, BartForConditionalGeneration
+
 
 class BartModel(nn.Module):
     def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2, d=512):
@@ -21,16 +22,18 @@ class BartModel(nn.Module):
         config = BartConfig(vocab_size=5000, max_position_embeddings=150, )
         self.encoder = BartEncoder(config)
         self.decoder = BartDecoder(config)
+        self.generate = BartForConditionalGeneration(config)
 
         self.dropout = nn.Dropout(p=0.2)
         self.output = nn.Linear(d, n_token)
 
 
     def forward(self, inputs, outputs=None):
-        if outputs is None:
-            return self._infer(inputs)
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(1)] = 0.0
+        if outputs is None:
+            return self._infer(inputs)
+            # return self.generate(inputs, attention_mask=attn_mask, )
         feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True, output_attentions=True)
 
         out = self.decoder(encoder_hidden_states=feature[0], encoder_attention_mask=feature[2])

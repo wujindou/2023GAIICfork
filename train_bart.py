@@ -183,4 +183,4 @@ if WANDB:
     )
 
 train()
-# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# inference('checkpoint/%d/model_90.pt'%version, conf['test_file'])

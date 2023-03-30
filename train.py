@@ -177,5 +177,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-train()
-# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# train()
+inference('checkpoint/%d_42/model_90.pt'%version, conf['test_file'])

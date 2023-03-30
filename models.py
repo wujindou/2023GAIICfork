@@ -6,8 +6,6 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import gensim
 import math
 
 class TranslationModel(nn.Module):
@@ -64,7 +62,7 @@ class Decoder(nn.Module):
         self.max_l = max_l
     
         decoder_layer = nn.TransformerDecoderLayer(d_model=d, nhead=n_head)
-        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=n_layer) 
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=n_layer)
         
         if n_token is not None:
             self.output = nn.Linear(d, n_token)

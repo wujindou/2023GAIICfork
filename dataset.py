@@ -55,7 +55,7 @@ class TranslationDataset(BaseDataset):
         return np.array(source)[:self.input_l], np.array(target)[:self.output_l]
 
 class BartDataset(BaseDataset):
-    def __init__(self, data_file, input_l, output_l, sos_id=1, eos_id=2, pad_id=0):
+    def __init__(self, data_file, input_l, output_l, sos_id=0, eos_id=2, pad_id=1):
         with open(data_file, 'r') as fp:
             reader = csv.reader(fp)
             self.samples = [row for row in reader]
@@ -67,6 +67,12 @@ class BartDataset(BaseDataset):
     def __len__(self):
         return len(self.samples)
     def _try_getitem(self, idx):
-        source = self.samples[idx][1]
-        target = self.samples[idx][2]
-        return np.array(source), np.array(target)
+        source = [int(x) for x in self.samples[idx][1].split()]
+        if len(source)<self.input_l:
+            source.extend([self.pad_id] * (self.input_l-len(source)))
+        if len(self.samples[idx])<3:
+            return np.array(source)[:self.input_l]
+        target = [self.sos_id] + [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
+        if len(target)<self.output_l:
+            target.extend([self.pad_id] * (self.output_l-len(target)))
+        return np.array(source)[:self.input_l], np.array(target)[:self.output_l]

@@ -4,13 +4,11 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
-import numpy as np
-import json
 import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
-from models_bart import TranslationModel
-from dataset import BartDataset as TranslationDataset
+from models_bart import BartModel
+from dataset import BartDataset
 from config_bart import Config
 from losses import CE
 
@@ -62,12 +60,12 @@ def evaluate(model, loader, output_file=None, n=-1):
     return metrics
 
 def get_model():
-    return TranslationModel(conf['n_token'], conf['output_l'])
+    return BartModel(n_token=conf['n_token'], max_l=conf['output_l'])
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
-    train_data = TranslationDataset(conf['train_file'], conf['input_l'], conf['output_l'])
-    valid_data = TranslationDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
+    train_data = BartDataset(conf['train_file'], conf['input_l'], conf['output_l'])
+    valid_data = BartDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
 
     train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
     valid_loader = DataLoader(valid_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
@@ -150,7 +148,7 @@ def train():
     writer.close()
     
 def inference(model_file, data_file):
-    test_data = TranslationDataset(data_file, conf['input_l'], conf['output_l'])
+    test_data = BartDataset(data_file, conf['input_l'], conf['output_l'])
     test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=1, drop_last=False)
 
     model = get_model()

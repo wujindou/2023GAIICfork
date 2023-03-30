@@ -53,8 +53,6 @@ def evaluate(model, loader, output_file=None, n=-1):
             res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
             tot += 1
-            print(targets[i])
-            print(pred[i])
     CiderD_scorer = CiderD(df='corpus', sigma=15)
     cider_score, cider_scores = CiderD_scorer.compute_score(gts, res)
     metrics.update(cider = cider_score)
@@ -151,7 +149,7 @@ def train():
     
 def inference(model_file, data_file):
     test_data = BartDataset(data_file, conf['input_l'], conf['output_l'])
-    test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=1, drop_last=False)
+    test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=12, drop_last=False)
 
     model = get_model()
     checkpoint = Checkpoint(model = model)

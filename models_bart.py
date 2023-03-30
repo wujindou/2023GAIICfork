@@ -33,7 +33,7 @@ class BartModel(nn.Module):
         attn_mask[inputs.eq(1)] = 0.0
         feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True, output_attentions=True)
 
-        out = self.decoder(encoder_hidden_states=feature[0], encoder_attention_mask=feature[2])
+        out = self.decoder(decoder_input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=feature[2], max_position_embeddings=self.max_l)
         out = out.last_hidden_state
         out = self.dropout(out)
         out = self.output(out) #[B, L, n_token]

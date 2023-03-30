@@ -16,7 +16,7 @@ from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
 import wandb
-WANDB = True
+WANDB = False
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')

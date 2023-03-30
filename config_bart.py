@@ -1,10 +1,10 @@
 class Config(dict):
     def version_config(self, version):
-        batch = 32
-        val_batch = 8
-        hp = {1: {'n_epoch':150, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
+        batch = 100
+        val_batch = 50
+        hp = {1: {'n_epoch':145, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
               }
-        self['n_epoch'] = hp[version].get('n_epoch', 10)
+        self['n_epoch'] = hp[version].get('n_epoch', 145)
         self['n_layer'] = hp[version].get('n_layer', 6)
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)

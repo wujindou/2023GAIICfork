@@ -19,7 +19,7 @@ class BartModel(nn.Module):
         self.max_l = max_l
         self.d = d
 
-        config = BartConfig(vocab_size=5000, max_position_embeddings=150, )
+        config = BartConfig(vocab_size=5000, max_position_embeddings=150, encoder_layers=6, decoder_layers=6)
         self.encoder = BartEncoder(config)
         self.decoder = BartDecoder(config)
         self.generate = BartForConditionalGeneration(config)
@@ -28,16 +28,17 @@ class BartModel(nn.Module):
         self.output = nn.Linear(d, n_token)
 
 
-    def forward(self, inputs, outputs=None):
+    def forward(self, inputs, outputs=None, val=False):
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(1)] = 0.0
         if outputs is None:
             return self._infer(inputs)
             # return self.generate(inputs, attention_mask=attn_mask, )
         feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
-        out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0])
+        out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=attn_mask)
         out = out.last_hidden_state
-        out = self.dropout(out)
+        if not val:
+            out = self.dropout(out)
         out = self.output(out) #[B, L, n_token]
         return out
 
@@ -51,7 +52,7 @@ class BartModel(nn.Module):
 
         for token_i in range(1, self.max_l):
 
-            out = self.forward(source, outputs)  # [B, L, n_token]
+            out = self.forward(source, outputs, val=True)  # [B, L, n_token]
             prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
             val, idx = torch.topk(prob, 1)  # (B,1)
 

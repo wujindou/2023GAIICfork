@@ -6,11 +6,8 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-from transformers import BartConfig
-from transformers import BartModel as BartModelRaw
-from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder
-from transformers.generation_utils import GenerationMixin
-import heapq
+from transformers import BartConfig, BartForConditionalGeneration
+
 
 class BartModel(nn.Module):
     def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2):
@@ -46,43 +43,26 @@ class BartModel(nn.Module):
             use_cache=True,
             num_labels=3,
         )
-        
-        bart_base = BartModelRaw.from_pretrained("/root/autodl-tmp/pretrain/")
-        bart_base.resize_token_embeddings(config.vocab_size)
-        self.shared = nn.Embedding(config.vocab_size, config.d_model, config.pad_token_id)
 
-        self.encoder = BartEncoder(config, self.shared)
-        encoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'encoder' in k}
-        self.encoder.load_state_dict(encoder_state_dict, strict=False)
-        
-        self.decoder = BartDecoder(config, self.shared)
-        decoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'decoder' in k}
-        self.decoder.load_state_dict(decoder_state_dict, strict=False)
-        
-        self.dropout = nn.Dropout(p=0.2)
-        self.output = nn.Linear(config.d_model, n_token)
-
+        self.model = BartForConditionalGeneration(config)
 
     def forward(self, inputs, outputs=None, val=False):
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(1)] = 0.0
-        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
-
         if outputs is None:
-            return self._infer(inputs)
-
-        out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=attn_mask)
+            return self.model.generate(inputs=inputs, max_length=80, min_length=2, use_cache=True, num_beams=5, early_stopping=True)
+        out = self.model(input_ids=inputs, attention_mask=attn_mask, labels=outputs, use_cache=True, output_hidden_states=True)
         out = out.last_hidden_state
         if not val:
             out = self.dropout(out)
-        out = self.output(out) #[B, L, n_token]
+        out = self.output(out)  # [B, L, n_token]
         return out
 
     def _infer(self, source, top_k=1, mode='greedy'):
         """
         source: [B,S,E],
         """
-        if mode=='greedy':
+        if mode == 'greedy':
             outputs = torch.ones((source.shape[0], 1), dtype=torch.long).to(source.device) * self.sos_id  # (K,B,1) SOS
             not_over = torch.ones((source.shape[0])).to(source.device)  # [K,B]
             assert top_k == 1
@@ -98,7 +78,7 @@ class BartModel(nn.Module):
                 if torch.sum(not_over) == 0:
                     break
             return outputs  # (B,L)
-        elif mode=='beam_search':
+        elif mode == 'beam_search':
             beam_size = self.beam_size
             batch_size = source.shape[0]
             outputs = torch.ones((batch_size, 1), dtype=torch.long).to(source.device) * self.sos_id  # (B,1) SOS

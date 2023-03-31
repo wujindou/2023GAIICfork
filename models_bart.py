@@ -6,8 +6,10 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-from transformers import BartConfig, BartForConditionalGeneration
-from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, BartForConditionalGeneration
+from transformers import BartConfig
+from transformers import BartModel as BartModelRaw
+from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder
+from transformers.generation_utils import GenerationMixin
 import heapq
 
 class BartModel(nn.Module):
@@ -20,7 +22,7 @@ class BartModel(nn.Module):
         self.beam_size = 5
 
         config = BartConfig(
-            vocab_size=3000,
+            vocab_size=n_token,
             max_position_embeddings=150,
             encoder_layers=6,
             encoder_attention_heads=8,
@@ -44,11 +46,19 @@ class BartModel(nn.Module):
             use_cache=True,
             num_labels=3,
         )
+        
+        bart_base = BartModelRaw.from_pretrained("/root/autodl-tmp/pretrain/")
+        bart_base.resize_token_embeddings(config.vocab_size)
         self.shared = nn.Embedding(config.vocab_size, config.d_model, config.pad_token_id)
-        self.encoder = BartEncoder(config, self.shared)
-        self.decoder = BartDecoder(config, self.shared)
-        self.generate = BartForConditionalGeneration(config)
 
+        self.encoder = BartEncoder(config, self.shared)
+        encoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'encoder' in k}
+        self.encoder.load_state_dict(encoder_state_dict, strict=False)
+        
+        self.decoder = BartDecoder(config, self.shared)
+        decoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'decoder' in k}
+        self.decoder.load_state_dict(decoder_state_dict, strict=False)
+        
         self.dropout = nn.Dropout(p=0.2)
         self.output = nn.Linear(config.d_model, n_token)
 
@@ -56,10 +66,11 @@ class BartModel(nn.Module):
     def forward(self, inputs, outputs=None, val=False):
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(1)] = 0.0
+        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
+
         if outputs is None:
             return self._infer(inputs)
-            # return self.generate(inputs, attention_mask=attn_mask, )
-        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
+
         out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=attn_mask)
         out = out.last_hidden_state
         if not val:

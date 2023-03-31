@@ -6,139 +6,137 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-import math
+from transformers import BartConfig, BartForConditionalGeneration
+from transformers import BartModel as BartModelRaw
+from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, BartForConditionalGeneration
+import heapq
 
-class TranslationModel(nn.Module):
-    def __init__(self, input_l, output_l, n_token, encoder_layer=6, decoder_layer=6, d=512, n_head=8, sos_id=1, pad_id=0):
-        super().__init__()
-        self.encoder = Encoder(input_l, n_token, n_layer=encoder_layer, d=d, n_head=n_head, pad_id=pad_id)
-        self.decoder = Decoder(output_l, input_l, n_token, n_layer=decoder_layer, d=d, n_head=n_head, sos_id=sos_id, pad_id=pad_id)
-    def forward(self, inputs, outputs=None, beam=1):
-        feature = self.encoder(inputs) #[B,S,512]
-        if outputs is None:
-            return self.decoder(feature, caption=None, top_k=beam)
-        return self.decoder(feature, outputs) #[B,L,n_token]
-
-class Encoder(nn.Module):
-    def __init__(self, max_l, n_token, n_layer=6, d=512, n_head=8, pad_id=0):
-        super().__init__()
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d, nhead=n_head)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layer) 
-        self.posit_embedding = RoPE(d)
-        self.token_embedding = nn.Embedding(n_token, d)
-        self.nhead = n_head
-        self.pad_id = pad_id
-
-    def forward(self, inputs):
-        padding_mask = (inputs == self.pad_id) 
-    
-        inputs = self.token_embedding(inputs) #[B,S,512]
-
-        source_posit_embed = self.posit_embedding(inputs)
-        source_embed = inputs + source_posit_embed
-    
-        source_embed = torch.transpose(source_embed, 0, 1)
-        attn_mask = torch.full((inputs.shape[1], inputs.shape[1]), 0.0).to(inputs.device)
-
-        output = self.transformer_encoder(src=source_embed, mask=attn_mask, src_key_padding_mask=padding_mask) #[S, B, 512]
-        output = torch.transpose(output, -2, -3) #[B, S, 512]
-
-        return output
-    
-class Decoder(nn.Module):
-    def __init__(self, max_l, input_l, n_token, sos_id=1, pad_id=0, 
-                 n_layer=6, n_head=8, d=512):
+class BartModel(nn.Module):
+    def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2):
         super().__init__()
         self.pad_id = pad_id
         self.sos_id = sos_id
-        self.n_head = n_head
-        self.d = d
-        if n_token is not None:
-            self.n_token = n_token
-            self.token_embedding = nn.Embedding(n_token, d)
-        self.posit_embedding = nn.Embedding(max_l, d)
-        self.source_posit_embedding = nn.Embedding(input_l, d)
-        
+        self.eos_id = eos_id
         self.max_l = max_l
-    
-        decoder_layer = nn.TransformerDecoderLayer(d_model=d, nhead=n_head)
-        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=n_layer)
-        
-        if n_token is not None:
-            self.output = nn.Linear(d, n_token)
-            self.dropout = nn.Dropout(p=0.2)
-            self.output.weight = self.token_embedding.weight
-            
-    def forward(self, source, caption, top_k=1, eos_id=2, mode='greedy'):
-        """
-        source: [B,S,E], S=1 or n_slice
-        caption: [B,L], token index。
-        """
-        if caption is None:
-            return self._infer(source=source, top_k=top_k, eos_id=eos_id, mode=mode) # (B,l)
-            
-        posit_index = torch.arange(caption.shape[1]).unsqueeze(0).repeat(caption.shape[0],1).to(caption.device) #(B,L)
-        target_embed = self.posit_embedding(posit_index) #输入shape后面增加E。(B,L,E)
-        target_embed += self.token_embedding(caption) # (B,L,E)
-        padding_mask = (caption == self.pad_id) #[B,L]
-        
-        attn_mask = self.generate_square_subsequent_mask(caption.shape[1]).to(caption.device) #[L,L]
+        self.beam_size = 5
 
-        #posit_index = torch.arange(source.shape[1]).unsqueeze(0).repeat(caption.shape[0],1).to(source.device) #(B,S)
-        #source_posit_embed = self.source_posit_embedding(posit_index) # [B,S,E]
-        #source_embed = source + source_posit_embed
+        config = BartConfig(
+            vocab_size=n_token,
+            max_position_embeddings=150,
+            encoder_layers=6,
+            encoder_attention_heads=8,
+            encoder_ffn_dim=2048,
+            encoder_layerdrop=0.1,
+            decoder_layers=6,
+            decoder_attention_heads=8,
+            decoder_ffn_dim=2048,
+            decoder_layerdrop=0.1,
+            d_model=512,
+            dropout=0.2,
+            activation_dropout=0.1,
+            attention_dropout=0.1,
+            init_std=0.02,
+            pad_token_id=1,
+            bos_token_id=0,
+            eos_token_id=2,
+            is_encoder_decoder=True,
+            decoder_start_token_id=2,
+            forced_eos_token_id=2,
+            use_cache=True,
+            num_labels=3,
+        )
         
-        target_embed = torch.transpose(target_embed, 0, 1) 
-        source_embed = torch.transpose(source, 0, 1)
-        out = self.transformer_decoder(tgt=target_embed, memory=source_embed, tgt_mask=attn_mask, tgt_key_padding_mask=padding_mask)
+        bart_base = BartModelRaw.from_pretrained("/root/autodl-tmp/pretrain/")
+        bart_base.resize_token_embeddings(config.vocab_size)
+        self.shared = nn.Embedding(config.vocab_size, config.d_model, config.pad_token_id)
 
-        out = torch.transpose(out, -2, -3) #[B, L, E]
-        out = self.dropout(out)
+        self.encoder = BartEncoder(config, self.shared)
+        encoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'encoder' in k}
+        self.encoder.load_state_dict(encoder_state_dict, strict=False)
+        
+        self.decoder = BartDecoder(config, self.shared)
+        decoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'decoder' in k}
+        self.decoder.load_state_dict(decoder_state_dict, strict=False)
+        
+        self.generate = BartForConditionalGeneration(config)
+
+        self.dropout = nn.Dropout(p=0.2)
+        self.output = nn.Linear(config.d_model, n_token)
+
+
+    def forward(self, inputs, outputs=None, val=False):
+        attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
+        attn_mask[inputs.eq(1)] = 0.0
+        if outputs is None:
+            return self._infer(inputs)
+        feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
+        out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=attn_mask)
+        out = out.last_hidden_state
+        if not val:
+            out = self.dropout(out)
         out = self.output(out) #[B, L, n_token]
         return out
 
-    def _infer(self, source, top_k=1, eos_id=2, mode='greedy'):
+    def _infer(self, source, top_k=1, mode='greedy'):
         """
         source: [B,S,E],
         """
-        outputs = torch.ones((source.shape[0], 1), dtype=torch.long).to(source.device) * self.sos_id # (K,B,1) SOS
-        not_over = torch.ones((source.shape[0])).to(source.device) #[K,B]
-        assert top_k==1
-        
-        for token_i in range(1, self.max_l):
-        
-            out = self.forward(source, outputs) #[B, L, n_token]
-            prob = nn.functional.softmax(out, dim=2)[:,-1] #[B, n_token]
-            val, idx = torch.topk(prob, 1) # (B,1)
-           
-            outputs = torch.cat([outputs, idx[:,0].view(-1,1)], dim=-1) # (B,L+1)
-            not_over = torch.minimum(not_over, torch.ne(outputs[:,-1], eos_id).long()) #[B]
-            if torch.sum(not_over)==0: 
-                break
-        return outputs # (B,L)
+        if mode=='greedy':
+            outputs = torch.ones((source.shape[0], 1), dtype=torch.long).to(source.device) * self.sos_id  # (K,B,1) SOS
+            not_over = torch.ones((source.shape[0])).to(source.device)  # [K,B]
+            assert top_k == 1
 
-    def generate_square_subsequent_mask(self, sz):
-        #float mask, -inf无法关注，0可以关注
-        return torch.triu(torch.full((sz, sz), float('-inf')), diagonal=1) #1。预测i位置可以用i及之前位置的输入
+            for token_i in range(1, self.max_l):
 
+                out = self.forward(source, outputs, val=True)  # [B, L, n_token]
+                prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
+                val, idx = torch.topk(prob, 1)  # (B,1)
 
-class RoPE(nn.Module):
-    def __init__(self, d_model, max_len=150):
-        super(RoPE, self).__init__()
-        self.d_model = d_model
-        self.max_len = max_len
+                outputs = torch.cat([outputs, idx[:, 0].view(-1, 1)], dim=-1)  # (B,L+1)
+                not_over = torch.minimum(not_over, torch.ne(outputs[:, -1], self.eos_id).long())  # [B]
+                if torch.sum(not_over) == 0:
+                    break
+            return outputs  # (B,L)
+        elif mode=='beam_search':
+            beam_size = self.beam_size
+            batch_size = source.shape[0]
+            outputs = torch.ones((batch_size, 1), dtype=torch.long).to(source.device) * self.sos_id  # (B,1) SOS
+            not_over = torch.ones((batch_size), dtype=torch.bool).to(source.device)  # [B]
 
-        # create fixed frequency terms for RoPE
-        self.freqs = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)).to("cuda:0")
-        self.freqs = self.freqs.unsqueeze(0)
+            beams = [(outputs, 0)]
 
-    def forward(self, x):
-        # create positions tensor
-        positions = torch.arange(0, x.size(1), device=x.device).float().unsqueeze(1).to("cuda:0")
+            for token_i in range(1, self.max_l):
 
-        # calculate RoPE
-        angles = torch.matmul(positions, self.freqs).to("cuda:0")
-        angles = torch.cat([torch.sin(angles), torch.cos(angles)], dim=-1).to("cuda:0")
-        angles = angles.unsqueeze(0).repeat(x.size(0), 1, 1)
+                new_beams = []
 
-        return angles
+                for beam_output, beam_score in beams:
+                    if not not_over.any():
+                        break
+
+                    out = self.forward(source, beam_output, val=True)  # [B, L, n_token]
+                    prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
+                    top_k_probs, top_k_indices = torch.topk(prob, beam_size)  # (B, beam_size)
+
+                    for i in range(beam_size):
+                        next_output = torch.cat([beam_output, top_k_indices[:, i].unsqueeze(1)], dim=-1)  # (B, L+1)
+                        next_score = beam_score - torch.log(top_k_probs[:, i])
+                        end_flags = torch.eq(next_output[:, -1], self.eos_id)
+
+                        for j in range(batch_size):
+                            if not not_over[j]:
+                                continue
+
+                            if end_flags[j]:
+                                not_over[j] = False
+
+                            new_beams.append((next_output[j], next_score[j]))
+
+                new_beams = sorted(new_beams, key=lambda x: x[1])[:beam_size]
+                beams = []
+
+                for beam_output, beam_score in new_beams:
+                    if not not_over.any():
+                        break
+                    beams.append((beam_output, beam_score))
+
+            return beams[0][0]  # (B,L)

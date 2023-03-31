@@ -1,26 +1,22 @@
+WANDB = False
+import wandb
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
-import numpy as np
-import json
 import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
-from models import TranslationModel
-from dataset import TranslationDataset
-from config import Config
+from models_bart import BartModel
+from dataset import BartDataset
+from config_bart import Config
 from losses import CE
 
-from evaluate import CiderD
-import wandb
+from transformers import BartConfig, BartForConditionalGeneration
 
-wandb.init(
-        project="2023GAIIC",
-        name="baseline",
-)
+from evaluate import CiderD
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')
@@ -43,7 +39,7 @@ def array2str(arr):
     return out.strip()
 
 
-def evaluate(model, loader, output_file=None, beam=1, n=-1):
+def evaluate(model, loader, output_file=None, n=-1):
     metrics = Smoother(100)
     res, gts = [], {}
     tot = 0
@@ -51,9 +47,8 @@ def evaluate(model, loader, output_file=None, beam=1, n=-1):
         if n>0 and tot>n:
             break
         source = to_device(source, 'cuda:0')
-        pred = model(source, beam=beam)
+        pred = model(source)
         pred = pred.cpu().numpy()
-        #print(pred.shape)
         for i in range(pred.shape[0]):
             res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
@@ -64,14 +59,19 @@ def evaluate(model, loader, output_file=None, beam=1, n=-1):
     print(metrics.value())
     return metrics
 
-
 def get_model():
-    return TranslationModel(conf['input_l'], conf['output_l'], conf['n_token'],
-                            encoder_layer=conf['n_layer'], decoder_layer=conf['n_layer'])
+    return BartModel(n_token=conf['n_token'], max_l=conf['output_l'])
+    # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
-    train_data = TranslationDataset(conf['train_file'], conf['input_l'], conf['output_l'])
-    valid_data = TranslationDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
+    if WANDB:
+        wandb.init(
+                project="2023GAIIC",
+                name="bart",
+        )
+
+    train_data = BartDataset(conf['train_file'], conf['input_l'], conf['output_l'])
+    valid_data = BartDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
 
     train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
     valid_loader = DataLoader(valid_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
@@ -86,7 +86,7 @@ def train():
     model.to('cuda:0')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.5)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
     start_epoch = 0
     
@@ -131,28 +131,31 @@ def train():
                 logger.log(step.value, train_loss.value())
                 logger.log(array2str(targets[0].cpu().numpy()))
                 logger.log(array2str(torch.argmax(pred[0], 1).cpu().numpy()))
-                wandb.log({'step': step.value})
-                wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
+                if WANDB:
+                    wandb.log({'step': step.value})
+                    wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch%6==0:
+        if epoch%6==0: # and epoch >= 11:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
             logger.log('valid', step.value, metrics.value())
-            wandb.log({'valid_metric': metrics.value()})
+            if WANDB:
+                wandb.log({'valid_metric': metrics.value()})
             writer.add_scalars('valid metric', metrics.value(), step.value)
             checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
             model.train()
 
         # scheduler.step()
-        wandb.log({'epoch': epoch})
+        if WANDB:
+            wandb.log({'epoch': epoch})
         ema.restore()
     logger.close()
     writer.close()
     
 def inference(model_file, data_file):
-    test_data = TranslationDataset(data_file, conf['input_l'], conf['output_l'])
-    test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=1, drop_last=False)
+    test_data = BartDataset(data_file, conf['input_l'], conf['output_l'])
+    test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=12, drop_last=False)
 
     model = get_model()
     checkpoint = Checkpoint(model = model)
@@ -167,7 +170,7 @@ def inference(model_file, data_file):
     tot = 0
     for source in tqdm(test_loader):
         source = to_device(source, 'cuda:0')
-        pred = model(source, beam=1)
+        pred = model(source)
         pred = pred.cpu().numpy()
         for i in range(pred.shape[0]):
             writer.writerow([tot, array2str(pred[i])])
@@ -177,5 +180,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-# train()
-inference('checkpoint/%d_42/model_90.pt'%version, conf['test_file'])
+train()
+# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

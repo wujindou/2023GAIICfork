@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import torch
 import torch.nn as nn
@@ -53,6 +53,8 @@ def evaluate(model, loader, output_file=None, n=-1):
             res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
             tot += 1
+            print(pred[i])
+            print(targets[i])
     CiderD_scorer = CiderD(df='corpus', sigma=15)
     cider_score, cider_scores = CiderD_scorer.compute_score(gts, res)
     metrics.update(cider = cider_score)

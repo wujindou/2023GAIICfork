@@ -2,9 +2,9 @@ class Config(dict):
     def version_config(self, version):
         batch = 100
         val_batch = 50
-        hp = {1: {'n_epoch':145, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
+        hp = {1: {'n_epoch':100, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
               }
-        self['n_epoch'] = hp[version].get('n_epoch', 145)
+        self['n_epoch'] = hp[version].get('n_epoch', 100)
         self['n_layer'] = hp[version].get('n_layer', 6)
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
@@ -17,7 +17,7 @@ class Config(dict):
     
         self['input_l'] = 150
         self['output_l'] = 80
-        self['n_token'] = 5000
+        self['n_token'] = 3000
         self['sos_id'] = 0
         self['eos_id'] = 2
         self['pad_id'] = 1

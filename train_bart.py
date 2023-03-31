@@ -64,6 +64,12 @@ def get_model():
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
+    if WANDB:
+        wandb.init(
+                project="2023GAIIC",
+                name="bart",
+        )
+
     train_data = BartDataset(conf['train_file'], conf['input_l'], conf['output_l'])
     valid_data = BartDataset(conf['valid_file'], conf['input_l'], conf['output_l'])
 
@@ -129,7 +135,7 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch%12==0:
+        if epoch%6==0 and epoch >= 11:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
@@ -174,11 +180,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-if WANDB:
-    wandb.init(
-            project="2023GAIIC",
-            name="bart",
-    )
-
 train()
-# inference('checkpoint/%d/model_90.pt'%version, conf['test_file'])
+# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

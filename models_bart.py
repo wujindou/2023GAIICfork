@@ -19,7 +19,7 @@ class BartModel(nn.Module):
         self.max_l = max_l
         self.d = d
 
-        config = BartConfig(vocab_size=5000, max_position_embeddings=150, encoder_layers=6, decoder_layers=6)
+        config = BartConfig(vocab_size=3000, max_position_embeddings=150, encoder_layers=6, decoder_layers=6)
         self.encoder = BartEncoder(config)
         self.decoder = BartDecoder(config)
         self.generate = BartForConditionalGeneration(config)

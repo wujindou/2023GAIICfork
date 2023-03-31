@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from transformers import BartConfig, BartForConditionalGeneration
 from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, BartForConditionalGeneration
+import heapq
 
 class BartModel(nn.Module):
     def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2):
@@ -16,6 +17,7 @@ class BartModel(nn.Module):
         self.sos_id = sos_id
         self.eos_id = eos_id
         self.max_l = max_l
+        self.beam_size = 5
 
         config = BartConfig(
             vocab_size=3000,
@@ -55,7 +57,7 @@ class BartModel(nn.Module):
         attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
         attn_mask[inputs.eq(1)] = 0.0
         if outputs is None:
-            return self._infer2(inputs)
+            return self._infer(inputs)
             # return self.generate(inputs, attention_mask=attn_mask, )
         feature = self.encoder(input_ids=inputs, attention_mask=attn_mask, output_hidden_states=True)
         out = self.decoder(input_ids=outputs, encoder_hidden_states=feature[0], encoder_attention_mask=attn_mask)
@@ -69,50 +71,62 @@ class BartModel(nn.Module):
         """
         source: [B,S,E],
         """
-        outputs = torch.ones((source.shape[0], 1), dtype=torch.long).to(source.device) * self.sos_id  # (K,B,1) SOS
-        not_over = torch.ones((source.shape[0])).to(source.device)  # [K,B]
-        assert top_k == 1
+        if mode=='greedy':
+            outputs = torch.ones((source.shape[0], 1), dtype=torch.long).to(source.device) * self.sos_id  # (K,B,1) SOS
+            not_over = torch.ones((source.shape[0])).to(source.device)  # [K,B]
+            assert top_k == 1
 
-        for token_i in range(1, self.max_l):
+            for token_i in range(1, self.max_l):
 
-            out = self.forward(source, outputs, val=True)  # [B, L, n_token]
-            prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
-            val, idx = torch.topk(prob, 1)  # (B,1)
+                out = self.forward(source, outputs, val=True)  # [B, L, n_token]
+                prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
+                val, idx = torch.topk(prob, 1)  # (B,1)
 
-            outputs = torch.cat([outputs, idx[:, 0].view(-1, 1)], dim=-1)  # (B,L+1)
-            not_over = torch.minimum(not_over, torch.ne(outputs[:, -1], self.eos_id).long())  # [B]
-            if torch.sum(not_over) == 0:
-                break
-        return outputs  # (B,L)
+                outputs = torch.cat([outputs, idx[:, 0].view(-1, 1)], dim=-1)  # (B,L+1)
+                not_over = torch.minimum(not_over, torch.ne(outputs[:, -1], self.eos_id).long())  # [B]
+                if torch.sum(not_over) == 0:
+                    break
+            return outputs  # (B,L)
+        elif mode=='beam_search':
+            beam_size = self.beam_size
+            batch_size = source.shape[0]
+            outputs = torch.ones((batch_size, 1), dtype=torch.long).to(source.device) * self.sos_id  # (B,1) SOS
+            not_over = torch.ones((batch_size), dtype=torch.bool).to(source.device)  # [B]
 
-    def _infer2(self, source, top_k=1, mode='beam_search'):
-        """
-        source: [B,S,E],
-        """
-        batch_size = source.shape[0]
-        outputs = torch.ones((batch_size, self.max_l), dtype=torch.long).to(source.device) * self.pad_id  # (B, L) PAD
-        outputs[:, 0] = self.sos_id  # (B,) SOS
-        not_over = torch.ones(batch_size).to(source.device)  # [B]
+            beams = [(outputs, 0)]
 
-        with torch.no_grad():
-            encoder_output = self.encoder(input_ids=source)
-            decoder_input_ids = torch.ones((batch_size, 1), dtype=torch.long).to(source.device) * self.sos_id
+            for token_i in range(1, self.max_l):
 
-            if mode == 'greedy':
-                for token_i in range(1, self.max_l):
-                    decoder_output = self.decoder(input_ids=decoder_input_ids,
-                                                  encoder_hidden_states=encoder_output.last_hidden_state)
-                    logits = self.output(decoder_output.last_hidden_state[:, -1])  # (B, V)
-                    next_tokens = logits.argmax(dim=-1)  # (B,)
-                    outputs[:, token_i] = next_tokens
-                    decoder_input_ids = next_tokens.unsqueeze(1)
-                    not_over = not_over * torch.ne(next_tokens, self.eos_id).long()  # (B,)
-                    if not_over.sum() == 0:
+                new_beams = []
+
+                for beam_output, beam_score in beams:
+                    if not not_over.any():
                         break
-            elif mode == 'beam_search':
-                beam_width = top_k
-                logits = self.generate.generate(source, max_length=self.max_l, num_beams=beam_width,
-                                                early_stopping=True).sequences
-                outputs[:, :logits.shape[1]] = logits
 
-        return outputs  # (B, L)
+                    out = self.forward(source, beam_output, val=True)  # [B, L, n_token]
+                    prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
+                    top_k_probs, top_k_indices = torch.topk(prob, beam_size)  # (B, beam_size)
+
+                    for i in range(beam_size):
+                        next_output = torch.cat([beam_output, top_k_indices[:, i].unsqueeze(1)], dim=-1)  # (B, L+1)
+                        next_score = beam_score - torch.log(top_k_probs[:, i])
+                        end_flags = torch.eq(next_output[:, -1], self.eos_id)
+
+                        for j in range(batch_size):
+                            if not not_over[j]:
+                                continue
+
+                            if end_flags[j]:
+                                not_over[j] = False
+
+                            new_beams.append((next_output[j], next_score[j]))
+
+                new_beams = sorted(new_beams, key=lambda x: x[1])[:beam_size]
+                beams = []
+
+                for beam_output, beam_score in new_beams:
+                    if not not_over.any():
+                        break
+                    beams.append((beam_output, beam_score))
+
+            return beams[0][0]  # (B,L)

@@ -1,3 +1,5 @@
+WANDB = True
+import wandb
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -15,8 +17,6 @@ from losses import CE
 from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
-import wandb
-WANDB = True
 
 def compute_batch(model, source, targets, verbose = False, optional_ret = []):
     source = to_device(source, 'cuda:0')
@@ -135,7 +135,7 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch%6==0 and epoch >= 11:
+        if epoch%6==0: # and epoch >= 11:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
@@ -180,5 +180,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-train()
-# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# train()
+inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

@@ -6,10 +6,9 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-from transformers import BartConfig, BartForConditionalGeneration
+from transformers import BartConfig
 from transformers import BartModel as BartModelRaw
-from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder, BartForConditionalGeneration
-import heapq
+from transformers.models.bart.modeling_bart import BartEncoder, BartDecoder
 
 class BartModel(nn.Module):
     def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2):
@@ -42,8 +41,8 @@ class BartModel(nn.Module):
             is_encoder_decoder=True,
             decoder_start_token_id=2,
             forced_eos_token_id=2,
-            use_cache=True,
             num_labels=3,
+            use_cache=True,
         )
         
         bart_base = BartModelRaw.from_pretrained("/root/autodl-tmp/pretrain/")
@@ -58,8 +57,6 @@ class BartModel(nn.Module):
         decoder_state_dict = {k: v for k, v in bart_base.state_dict().items() if 'decoder' in k}
         self.decoder.load_state_dict(decoder_state_dict, strict=False)
         
-        self.generate = BartForConditionalGeneration(config)
-
         self.dropout = nn.Dropout(p=0.2)
         self.output = nn.Linear(config.d_model, n_token)
 
@@ -97,46 +94,3 @@ class BartModel(nn.Module):
                 if torch.sum(not_over) == 0:
                     break
             return outputs  # (B,L)
-        elif mode=='beam_search':
-            beam_size = self.beam_size
-            batch_size = source.shape[0]
-            outputs = torch.ones((batch_size, 1), dtype=torch.long).to(source.device) * self.sos_id  # (B,1) SOS
-            not_over = torch.ones((batch_size), dtype=torch.bool).to(source.device)  # [B]
-
-            beams = [(outputs, 0)]
-
-            for token_i in range(1, self.max_l):
-
-                new_beams = []
-
-                for beam_output, beam_score in beams:
-                    if not not_over.any():
-                        break
-
-                    out = self.forward(source, beam_output, val=True)  # [B, L, n_token]
-                    prob = nn.functional.softmax(out, dim=2)[:, -1]  # [B, n_token]
-                    top_k_probs, top_k_indices = torch.topk(prob, beam_size)  # (B, beam_size)
-
-                    for i in range(beam_size):
-                        next_output = torch.cat([beam_output, top_k_indices[:, i].unsqueeze(1)], dim=-1)  # (B, L+1)
-                        next_score = beam_score - torch.log(top_k_probs[:, i])
-                        end_flags = torch.eq(next_output[:, -1], self.eos_id)
-
-                        for j in range(batch_size):
-                            if not not_over[j]:
-                                continue
-
-                            if end_flags[j]:
-                                not_over[j] = False
-
-                            new_beams.append((next_output[j], next_score[j]))
-
-                new_beams = sorted(new_beams, key=lambda x: x[1])[:beam_size]
-                beams = []
-
-                for beam_output, beam_score in new_beams:
-                    if not not_over.any():
-                        break
-                    beams.append((beam_output, beam_score))
-
-            return beams[0][0]  # (B,L)

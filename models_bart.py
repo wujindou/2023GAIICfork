@@ -6,10 +6,10 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-from transformers import BartConfig, BartForConditionalGeneration
+from transformers import BartForConditionalGeneration, BartTokenizer
 
 
-class BartModel(nn.Module):
+class BartModel2(nn.Module):
     def __init__(self, n_token, max_l=80, sos_id=0, pad_id=1, eos_id=2):
         super().__init__()
         self.pad_id = pad_id
@@ -18,45 +18,22 @@ class BartModel(nn.Module):
         self.max_l = max_l
         self.beam_size = 5
 
-        config = BartConfig(
-            vocab_size=n_token,
-            max_position_embeddings=150,
-            encoder_layers=6,
-            encoder_attention_heads=8,
-            encoder_ffn_dim=2048,
-            encoder_layerdrop=0.1,
-            decoder_layers=6,
-            decoder_attention_heads=8,
-            decoder_ffn_dim=2048,
-            decoder_layerdrop=0.1,
-            d_model=512,
-            dropout=0.2,
-            activation_dropout=0.1,
-            attention_dropout=0.1,
-            init_std=0.02,
-            pad_token_id=1,
-            bos_token_id=0,
-            eos_token_id=2,
-            is_encoder_decoder=True,
-            decoder_start_token_id=2,
-            forced_eos_token_id=2,
-            use_cache=True,
-            num_labels=3,
-        )
+        self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
+        self.model = BartForConditionalGeneration.from_pretrained("./custom_bart")
+        self.dropout = nn.Dropout(p=0.2)
+        self.output = nn.Linear(768, n_token)
 
-        self.model = BartForConditionalGeneration(config)
-
-    def forward(self, inputs, outputs=None, val=False):
-        attn_mask = torch.full((inputs.shape[0], inputs.shape[1]), 1.0).to(inputs.device)
-        attn_mask[inputs.eq(1)] = 0.0
+    def forward(self, inputs, attn_mask, outputs=None, infer=False):
         if outputs is None:
-            return self.model.generate(inputs=inputs, max_length=80, min_length=2, use_cache=True, num_beams=5, early_stopping=True)
-        out = self.model(input_ids=inputs, attention_mask=attn_mask, labels=outputs, use_cache=True, output_hidden_states=True)
-        out = out.last_hidden_state
-        if not val:
-            out = self.dropout(out)
-        out = self.output(out)  # [B, L, n_token]
-        return out
+            if infer:
+                pred = self.model.generate(inputs=inputs, max_length=82, min_length=2, num_beams=self.beam_size, use_cache=True, early_stopping=True, \
+                        no_repeat_ngram_size=3, bos_token_id=0, pad_token_id=1, eos_token_id=2)
+                return self.tokenizer.decoder(pred)
+            else:
+                return self.model.generate(inputs=inputs, max_length=82, min_length=2, num_beams=self.beam_size, use_cache=True, early_stopping=True, \
+                        no_repeat_ngram_size=3, bos_token_id=0, pad_token_id=1, eos_token_id=2)
+        loss = self.model(input_ids=inputs, attention_mask=attn_mask, labels=outputs)
+        return loss
 
     def _infer(self, source, top_k=1, mode='greedy'):
         """

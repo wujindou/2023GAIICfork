@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import torch
 import torch.nn as nn
@@ -9,9 +9,9 @@ from tqdm import tqdm
 import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
-from models_bart import BartModel
+from models import BartModel
 from dataset import BartDataset
-from config_bart import Config
+from config import Config
 from losses import CE
 
 from transformers import BartConfig, BartForConditionalGeneration
@@ -135,7 +135,7 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': train_loss.value(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch%6==0: # and epoch >= 11:
+        if epoch%6==0 and epoch >= 100:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)

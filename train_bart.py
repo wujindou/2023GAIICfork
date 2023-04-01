@@ -1,5 +1,6 @@
-WANDB = True
+WANDB = False
 import wandb
+import numpy as np 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -158,13 +159,13 @@ def inference(model_file, data_file):
         source = to_device(source, 'cuda:0')
         mask = to_device(mask, 'cuda:0')
         pred = model(source, mask, infer=True)
-        pred = pred.cpu().numpy()
+        pred = np.array(pred)
         for i in range(pred.shape[0]):
-            writer.writerow([tot, array2str(pred[i])])
+            writer.writerow([tot, pred[i]])
             tot += 1
     fp.close()
 
-version = 1
+version = 2
 conf = Config(version)
 
 train()

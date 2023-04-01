@@ -1,5 +1,5 @@
 {
-  "_name_or_path": "/root/autodl-tmp/pretrain",
+  "_name_or_path": "/root/autodl-tmp/bart_chinese",
   "activation_dropout": 0.1,
   "activation_function": "gelu",
   "add_bias_logits": false,
@@ -24,7 +24,6 @@
   "encoder_layerdrop": 0.0,
   "encoder_layers": 6,
   "eos_token_id": 2,
-  "forced_bos_token_id": 0,
   "forced_eos_token_id": 2,
   "gradient_checkpointing": false,
   "id2label": {
@@ -68,6 +67,7 @@
       "num_beams": 6
     }
   },
+  "tie_word_embeddings": false,
   "torch_dtype": "float32",
   "transformers_version": "4.27.4",
   "use_cache": true,

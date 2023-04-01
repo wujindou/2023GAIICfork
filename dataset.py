@@ -67,7 +67,10 @@ class BartDataset(BaseDataset):
         return len(self.samples)
     def _try_getitem(self, idx):
         source = self.samples[idx][1]
-        target = self.samples[idx][2]
         source_ids = self.tokenizer(source, max_length=150, padding='max_length', truncation=True)
+        try:
+            target = self.samples[idx][2]
+        except:
+            return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask'])
         target_ids = self.tokenizer(target, max_length=80, padding='max_length', truncation=True)
         return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])

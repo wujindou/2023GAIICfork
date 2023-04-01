@@ -9,7 +9,7 @@ from pathlib import Path
 from tqdm import tqdm
 import csv
 
-from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM
+from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM, AWP
 from models_bart import BartModel2
 from dataset import BartDataset
 from config_bart import Config
@@ -18,13 +18,6 @@ from losses import CE
 from transformers import BartConfig, BartForConditionalGeneration
 
 from evaluate import CiderD
-
-def compute_batch(model, source, mask, targets, verbose = False, optional_ret = []):
-    source = to_device(source, 'cuda:0')
-    mask = to_device(mask, 'cuda:0')
-    targets = to_device(targets, 'cuda:0')
-    output = model(source, mask, targets)
-    return output.loss
 
 def array2str(arr):
     out = ''
@@ -81,13 +74,15 @@ def train():
     step = Step()
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
+    model.to('cuda:0')
     ema = EMA(model, 0.999, device="cuda:0")
     ema.register()
     fgm = FGM(model)
-    model.to('cuda:0')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
+
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
 
     start_epoch = 0
     
@@ -100,14 +95,23 @@ def train():
         print('epoch', epoch)
         logger.log('new epoch', epoch)
         for (source, mask, targets) in tqdm(train_loader):
+            source = to_device(source, 'cuda:0')
+            mask = to_device(mask, 'cuda:0')
+            targets = to_device(targets, 'cuda:0')
             step.forward(source.shape[0])
+
+            loss = model(source, mask, targets).loss
             
-            loss = compute_batch(model, source, mask, targets)
             loss = loss.mean()
             loss.backward()
+            
+            if conf['awp_start'] <= epoch:
+                loss = awp.attack_backward(source, mask, targets)
+                loss.backward()
+                awp._restore()
 
             fgm.attack()
-            adv_loss = compute_batch(model, source, mask, targets)
+            adv_loss = model(source, mask, targets).loss
             adv_loss = adv_loss.mean()
             adv_loss.backward()
             fgm.restore()
@@ -165,8 +169,8 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
-# train()
-inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+train()
+# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

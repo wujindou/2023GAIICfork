@@ -20,8 +20,6 @@ class BartModel2(nn.Module):
 
         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
         self.model = BartForConditionalGeneration.from_pretrained("./custom_bart")
-        self.dropout = nn.Dropout(p=0.2)
-        self.output = nn.Linear(768, n_token)
 
     def forward(self, inputs, attn_mask, outputs=None, infer=False):
         if outputs is None:

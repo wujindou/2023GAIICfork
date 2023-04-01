@@ -10,6 +10,7 @@ class Config(dict):
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
         self['w_g'] = 1
+        self['awp_start'] = 16
 
         #请自己造训练测试集
         self['train_file'] = 'data/train_9.csv'

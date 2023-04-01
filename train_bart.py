@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -122,7 +122,7 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if (epoch%2==0 and epoch >= 30) or epoch%6==0:
+        if (epoch%3==0 and epoch >= 24) or epoch%6==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
@@ -168,5 +168,5 @@ def inference(model_file, data_file):
 version = 2
 conf = Config(version)
 
-train()
-# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# train()
+inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

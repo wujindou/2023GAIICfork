@@ -18,8 +18,8 @@ class BartModel2(nn.Module):
         self.max_l = max_l
         self.beam_size = 5
 
-        self.tokenizer = BartTokenizer.from_pretrained('./custom_bart_chinese')
-        self.model = BartForConditionalGeneration.from_pretrained("./custom_bart_chinese")
+        self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
+        self.model = BartForConditionalGeneration.from_pretrained("./custom_bart")
         self.dropout = nn.Dropout(p=0.2)
         self.output = nn.Linear(768, n_token)
 

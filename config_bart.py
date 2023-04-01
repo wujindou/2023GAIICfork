@@ -12,8 +12,8 @@ class Config(dict):
         self['w_g'] = 1
 
         #请自己造训练测试集
-        self['train_file'] = 'data/train.csv'
-        self['valid_file'] = 'data/val.csv'
+        self['train_file'] = 'data/train_9.csv'
+        self['valid_file'] = 'data/val_9.csv'
         self['test_file'] = 'data/preliminary_a_test.csv'
     
         self['input_l'] = 150

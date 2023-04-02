@@ -82,7 +82,7 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.01)
 
     start_epoch = 0
     
@@ -169,7 +169,7 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 1
+version = 2
 conf = Config(version)
 
 train()

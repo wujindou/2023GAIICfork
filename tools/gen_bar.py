@@ -4,7 +4,7 @@ import numpy as np
 from tokenizers import ByteLevelBPETokenizer
 from transformers import BartTokenizer, BartForConditionalGeneration
 
-path = './custom_bart_chinese'
+path = './custom_pretrain'
 os.mkdir(path)
 samples = []
 with open("../data/raw.csv",'r') as fp:
@@ -33,6 +33,6 @@ tokenizer.save_model(path)
 tokenizer = BartTokenizer.from_pretrained(path)
 tokenizer.save_pretrained(path)
 
-model = BartForConditionalGeneration.from_pretrained("/root/autodl-tmp/bart_chinese")
+model = BartForConditionalGeneration.from_pretrained("/root/autodl-tmp/pretrain")
 model.resize_token_embeddings(tokenizer.vocab_size)
 model.save_pretrained(path)

@@ -82,7 +82,7 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.01)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
     start_epoch = 0
     
@@ -126,7 +126,8 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if (epoch%3==0 and epoch >= 24) or epoch%6==0:
+        if epoch>100:
+        # if (epoch%3==0 and epoch >= 24) or epoch%6==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)

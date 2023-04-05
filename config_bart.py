@@ -25,7 +25,7 @@ class Config(dict):
         self['pad_id'] = 1
         
     def __init__(self, version, seed=0):
-        self['lr'] = 2e-4
+        self['lr'] = 1e-4
         self['model_dir'] = './checkpoint/%d'%version
         if seed>0:
             self['model_dir'] += '_%d'%seed

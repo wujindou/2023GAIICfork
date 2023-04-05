@@ -110,27 +110,26 @@ class NgramData(BaseDataset):
     def __init__(self, path):
         super().__init__()
         self.data = pd.read_csv(path,header=None)
-        self.test_text = self.data.iloc[:, 1].isnull()
         self.tk = BartTokenizer.from_pretrained('./custom_bart')
-        self.maxLen = 150
+        self.maxLen = 224
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
 
     def __len__(self):
         return len(self.data)
+
     def _try_getitem(self, idx):
         text1, text2, = self.data.iloc[idx]
+        text1_ids,text2_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids, self.tk(text2, max_length=80, padding='max_length', truncation=True).input_ids
         if random.random()>0.5:
-            text1,text2=text2,text1
-        text1,text2=truncate(text1,text2,self.maxLen)
-        text1_ids,text2_ids = self.tk.convert_tokens_to_ids(text1),self.tk.convert_tokens_to_ids(text2)
+            text1_ids,text2_ids = text2_ids,text1_ids 
         text1_ids, out1_ids = self.random_mask(text1_ids)
         text2_ids, out2_ids = self.random_mask(text2_ids)
         input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
         token_type_ids=[0]*(len(text1_ids)+2)+[1]*(len(text2_ids)+1)
         labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
         assert len(input_ids)==len(token_type_ids)==len(labels)
-        return input_ids, token_type_ids, labels
+        return torch.LongTensor(input_ids), torch.LongTensor(token_type_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []

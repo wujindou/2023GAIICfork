@@ -32,7 +32,7 @@ def train():
     model = torch.nn.DataParallel(model)
     model.to('cuda:0')
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr']/2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
 
     start_epoch = 0
     

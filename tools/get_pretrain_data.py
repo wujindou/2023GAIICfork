@@ -9,14 +9,8 @@ with open("../data/raw.csv",'r') as fp:
     reader = csv.reader(fp)
     sample = [row for row in reader]
     for i in sample:
-        samples.append(i[1]+","+i[2])
+        a = i[1].split()
+        b = i[2].split()
+        samples.append(len(a)+len(b))
 
-# with open("../data/preliminary_a_test.csv",'r') as fp:
-#     reader = csv.reader(fp)
-#     sample = [row for row in reader]
-#     for i in sample:
-#         samples.append(i[1]+",")
-
-with open("data.csv", 'w') as f:
-    for i in samples:
-        f.write(i + '\n')
+print(np.array(samples).max())

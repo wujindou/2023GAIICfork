@@ -35,12 +35,11 @@ class CustomBartModel(nn.Module):
 
 
 class PretrainBartModel(nn.Module):
-    def __init__(self, n_token, max_l=150, sos_id=0, pad_id=1, eos_id=2):
+    def __init__(self, n_token, sos_id=0, pad_id=1, eos_id=2):
         super().__init__()
         self.pad_id = pad_id
         self.sos_id = sos_id
         self.eos_id = eos_id
-        self.max_l = max_l
         self.beam_size = 5
 
         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')

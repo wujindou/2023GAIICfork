@@ -1,21 +1,16 @@
-import json
-import glob
-import cv2
-from pathlib import Path
-import torch
-from torch.utils.data import Dataset
-from torchvision import transforms
-from transformers import BartTokenizer
-import numpy as np
-from PIL import Image
-import random
-import time
 import csv
 import traceback
+
+from torch.utils.data import Dataset
+from transformers import BartTokenizer
+
+from utils import *
+
 
 class BaseDataset(Dataset):
     def _try_getitem(self, idx):
         raise NotImplementedError
+
     def __getitem__(self, idx):
         wait = 0.1
         while True:
@@ -24,12 +19,13 @@ class BaseDataset(Dataset):
                 return ret
             except KeyboardInterrupt:
                 break
-            except (Exception, BaseException) as e: 
+            except (Exception, BaseException) as e:
                 exstr = traceback.format_exc()
                 print(exstr)
                 print('read error, waiting:', wait)
                 time.sleep(wait)
-                wait = min(wait*2, 1000)
+                wait = min(wait * 2, 1000)
+
 
 class TranslationDataset(BaseDataset):
     def __init__(self, data_file, input_l, output_l, sos_id=1, eos_id=2, pad_id=0):
@@ -41,18 +37,21 @@ class TranslationDataset(BaseDataset):
             self.sos_id = sos_id
             self.pad_id = pad_id
             self.eos_id = eos_id
+
     def __len__(self):
         return len(self.samples)
+
     def _try_getitem(self, idx):
         source = [int(x) for x in self.samples[idx][1].split()]
-        if len(source)<self.input_l:
-            source.extend([self.pad_id] * (self.input_l-len(source)))
-        if len(self.samples[idx])<3:
+        if len(source) < self.input_l:
+            source.extend([self.pad_id] * (self.input_l - len(source)))
+        if len(self.samples[idx]) < 3:
             return np.array(source)[:self.input_l]
         target = [self.sos_id] + [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
-        if len(target)<self.output_l:
-            target.extend([self.pad_id] * (self.output_l-len(target)))
+        if len(target) < self.output_l:
+            target.extend([self.pad_id] * (self.output_l - len(target)))
         return np.array(source)[:self.input_l], np.array(target)[:self.output_l]
+
 
 class BartDataset(BaseDataset):
     def __init__(self, data_file, sos_id=0, eos_id=2, pad_id=1):
@@ -63,8 +62,10 @@ class BartDataset(BaseDataset):
             self.pad_id = pad_id
             self.eos_id = eos_id
             self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
+
     def __len__(self):
         return len(self.samples)
+
     def _try_getitem(self, idx):
         source = self.samples[idx][1]
         source_ids = self.tokenizer(source, max_length=150, padding='max_length', truncation=True)
@@ -73,4 +74,88 @@ class BartDataset(BaseDataset):
         except:
             return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask'])
         target_ids = self.tokenizer(target, max_length=80, padding='max_length', truncation=True)
-        return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
+        return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(
+            source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
+
+
+class NgramData(BaseDataset):
+    # 传入句子对列表
+    def __init__(self, path: str, max_len: int, tk: BartTokenizer):
+        super().__init__()
+        self.data = []
+        with open(path) as f:
+            for line in f:
+                line.strip()
+            self.data.append(line)
+        self.max_len = max_len
+        self.tk = tk
+        self.special_num = len(tk.all_special_tokens)
+        self.vocab_size = tk.vocab_size
+
+    def __len__(self):
+        return len(self.data)
+
+    def random_mask(self, text_ids):
+        input_ids, output_ids = [], []
+        rands = np.random.random(len(text_ids))
+        idx = 0
+        while idx < len(rands):
+            if rands[idx] < 0.15:  # 需要mask
+                ngram = np.random.choice([1, 2, 3], p=[0.7, 0.2, 0.1])  # 若要mask，进行x_gram mask的概率
+                if ngram == 3 and len(rands) < 7:  # 太大的gram不要应用于过短文本
+                    ngram = 2
+                if ngram == 2 and len(rands) < 4:
+                    ngram = 1
+                L = idx + 1
+                R = idx + ngram  # 最终需要mask的右边界（开）
+                while L < R and L < len(rands):
+                    rands[L] = np.random.random() * 0.15  # 强制mask
+                    L += 1
+                idx = R
+                if idx < len(rands):
+                    rands[idx] = 1  # 禁止mask片段的下一个token被mask，防止一大片连续mask
+            idx += 1
+
+        for r, i in zip(rands, text_ids):
+            if r < 0.15 * 0.8:
+                input_ids.append(self.tk.mask_token_id)
+                output_ids.append(i)  # mask预测自己
+            elif r < 0.15 * 0.9:
+                input_ids.append(i)
+                output_ids.append(i)  # 自己预测自己
+            elif r < 0.15:
+                input_ids.append(np.random.randint(self.special_num, self.vocab_size))
+                output_ids.append(i)  # 随机的一个词预测自己，随机词不会从特殊符号中选取，有小概率抽到自己
+            else:
+                input_ids.append(i)
+                output_ids.append(-100)  # 保持原样不预测
+
+        return input_ids, output_ids
+
+    # 耗时操作在此进行，可用上多进程
+    def _try_getitem(self, item):
+        text1, text2, _ = self.data[item]  # 预处理，mask等操作
+        if random.random() > 0.5:
+            text1, text2 = text2, text1  # 交换位置
+        text1, text2 = truncate(text1, text2, self.max_len)
+        text1_ids, text2_ids = self.tk.convert_tokens_to_ids(text1), self.tk.convert_tokens_to_ids(text2)
+        text1_ids, out1_ids = self.random_mask(text1_ids)  # 添加mask预测
+        text2_ids, out2_ids = self.random_mask(text2_ids)
+        input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [
+            self.tk.sep_token_id]  # 拼接
+        token_type_ids = [0] * (len(text1_ids) + 2) + [1] * (len(text2_ids) + 1)
+        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        assert len(input_ids) == len(token_type_ids) == len(labels)
+        return input_ids, token_type_ids, labels
+
+    @classmethod
+    def collate(cls, batch):
+        input_ids = [i['input_ids'] for i in batch]
+        token_type_ids = [i['token_type_ids'] for i in batch]
+        labels = [i['labels'] for i in batch]
+        input_ids = paddingList(input_ids, 0, returnTensor=True)
+        token_type_ids = paddingList(token_type_ids, 0, returnTensor=True)
+        labels = paddingList(labels, -100, returnTensor=True)
+        attention_mask = (input_ids != 0)
+        return {'input_ids': input_ids, 'token_type_ids': token_type_ids
+            , 'attention_mask': attention_mask, 'labels': labels}

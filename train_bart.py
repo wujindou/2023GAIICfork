@@ -10,7 +10,7 @@ from tqdm import tqdm
 import csv
 
 from utils import to_device, Checkpoint, Step, Smoother, Logger, EMA, FGM, AWP
-from models_bart import BartModel2
+from models_bart import CustomBartModel
 from dataset import BartDataset
 from config_bart import Config
 from losses import CE
@@ -54,7 +54,7 @@ def evaluate(model, loader, output_file=None, n=-1):
     return metrics
 
 def get_model():
-    return BartModel2(n_token=conf['n_token'])
+    return CustomBartModel(n_token=conf['n_token'])
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():

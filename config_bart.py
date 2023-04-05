@@ -13,6 +13,7 @@ class Config(dict):
         self['awp_start'] = 12
 
         #请自己造训练测试集
+        self['pretrain_file'] = 'data/data.txt'
         self['train_file'] = 'data/train_9.csv'
         self['valid_file'] = 'data/val_9.csv'
         self['test_file'] = 'data/preliminary_a_test.csv'

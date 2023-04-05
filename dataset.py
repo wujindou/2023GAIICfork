@@ -87,73 +87,18 @@ class NgramData(BaseDataset):
                 line.strip()
             self.data.append(line)
         self.max_len = 150
-        self.tk = BartTokenizer.from_pretrained('./custom_bart')
-        self.special_num = len(self.tk.all_special_tokens)
-        self.vocab_size = self.tk.vocab_size
+        self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
+        self.mask_gen = NGramMaskGenerator(self.tokenizer, max_gram=1)
 
-    def __len__(self):
-        return len(self.data)
+    def _try_getitem(self, idx):
+        data = self.data[idx]
+        data_token = self.tokenizer.tokenize(data)
+        data_token, lm_labels = self.mask_gen.mask_tokens(data_token, random)
+        data_ids = self.tokenizer.convert_tokens_to_ids(data_token)
+        features = OrderedDict(input_ids=data_ids,
+                               input_mask=[1] * len(data_ids),
+                               labels=lm_labels)
 
-    def random_mask(self, text_ids):
-        input_ids, output_ids = [], []
-        rands = np.random.random(len(text_ids))
-        idx = 0
-        while idx < len(rands):
-            if rands[idx] < 0.15:  
-                ngram = np.random.choice([1, 2, 3], p=[0.7, 0.2, 0.1])  
-                if ngram == 3 and len(rands) < 7:  
-                    ngram = 2
-                if ngram == 2 and len(rands) < 4:
-                    ngram = 1
-                L = idx + 1
-                R = idx + ngram  
-                while L < R and L < len(rands):
-                    rands[L] = np.random.random() * 0.15  
-                    L += 1
-                idx = R
-                if idx < len(rands):
-                    rands[idx] = 1  
-            idx += 1
-
-        for r, i in zip(rands, text_ids):
-            if r < 0.15 * 0.8:
-                input_ids.append(self.tk.mask_token_id)
-                output_ids.append(i)  
-            elif r < 0.15 * 0.9:
-                input_ids.append(i)
-                output_ids.append(i)  
-            elif r < 0.15:
-                input_ids.append(np.random.randint(self.special_num, self.vocab_size))
-                output_ids.append(i)  
-            else:
-                input_ids.append(i)
-                output_ids.append(-100)  
-
-        return input_ids, output_ids
-
-    def _try_getitem(self, item):
-        text1, text2, _ = self.data[item]
-        if random.random() > 0.5:
-            text1, text2 = text2, text1
-        text1, text2 = truncate(text1, text2, self.max_len)
-        text1_ids, text2_ids = self.tk.convert_tokens_to_ids(text1), self.tk.convert_tokens_to_ids(text2)
-        text1_ids, out1_ids = self.random_mask(text1_ids)
-        text2_ids, out2_ids = self.random_mask(text2_ids)
-        input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [
-            self.tk.sep_token_id]  
-        token_type_ids = [0] * (len(text1_ids) + 2) + [1] * (len(text2_ids) + 1)
-        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
-        assert len(input_ids) == len(token_type_ids) == len(labels)
-        return torch.LongTensor(input_ids), torch.LongTensor(token_type_ids), torch.LongTensor(labels)
-
-    @classmethod
-    def collate(cls, batch):
-        input_ids = [i['input_ids'] for i in batch]
-        token_type_ids = [i['token_type_ids'] for i in batch]
-        labels = [i['labels'] for i in batch]
-        input_ids = paddingList(input_ids, 0, returnTensor=True)
-        token_type_ids = paddingList(token_type_ids, 0, returnTensor=True)
-        labels = paddingList(labels, -100, returnTensor=True)
-        attention_mask = (input_ids != 0)
-        return {'input_ids': input_ids, 'token_type_ids': token_type_ids
-            , 'attention_mask': attention_mask, 'labels': labels}
+        for f in features:
+            features[f] = torch.tensor(features[f] + [0] * (self.max_len - len(data_ids)), dtype=torch.int)
+        return features[0], features[1], features[2]

@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -32,15 +32,15 @@ def train():
     model = torch.nn.DataParallel(model)
     model.to('cuda:0')
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr']/2)
 
     start_epoch = 0
     
-    logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
+    logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
-    writer = SummaryWriter(conf['model_dir'])
+    writer = SummaryWriter(conf['pre_model_dir'])
     
-    Path(conf['model_dir']).mkdir(exist_ok=True, parents=True)
+    Path(conf['pre_model_dir']).mkdir(exist_ok=True, parents=True)
     for epoch in range(start_epoch, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
@@ -57,7 +57,7 @@ def train():
             optimizer.step() #优化一次
             optimizer.zero_grad() #清空梯度
 
-            if step.value%200==0:
+            if step.value%100==0:
                 logger.log(step.value, loss.item())
                 if WANDB:
                     wandb.log({'step': step.value})
@@ -72,7 +72,7 @@ def train():
     logger.close()
     writer.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
 train()

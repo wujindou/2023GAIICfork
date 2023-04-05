@@ -84,11 +84,11 @@ class NgramData(BaseDataset):
         self.data = []
         with open(path) as f:
             for line in f:
-                line.strip()
-            self.data.append(line)
+                line = line.strip('\n').replace('\n','')
+                self.data.append(line)
         self.max_len = 150
         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
-        self.mask_gen = NGramMaskGenerator(self.tokenizer, max_gram=1)
+        self.mask_gen = NGramMaskGenerator(self.tokenizer, max_gram=4, max_seq_len=150)
 
     def _try_getitem(self, idx):
         data = self.data[idx]
@@ -99,6 +99,10 @@ class NgramData(BaseDataset):
                                input_mask=[1] * len(data_ids),
                                labels=lm_labels)
 
+        torch.set_printoptions(profile="full")
         for f in features:
-            features[f] = torch.tensor(features[f] + [0] * (self.max_len - len(data_ids)), dtype=torch.int)
-        return features[0], features[1], features[2]
+            features[f] = torch.LongTensor(features[f] + [0] * (self.max_len - len(data_ids)))
+        return features["input_ids"], features["input_mask"], features["labels"]
+
+    def __len__(self):
+        return len(self.data)

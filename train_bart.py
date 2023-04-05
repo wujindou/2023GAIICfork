@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import numpy as np 
 import torch

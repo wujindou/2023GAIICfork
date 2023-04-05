@@ -363,7 +363,8 @@ class NGramMaskGenerator:
 
         self.max_gram = max(max_gram, 1)
         self.mask_window = int(1 / mask_lm_prob)  # make ngrams per window sized context
-        self.vocab_words = list(tokenizer.vocab.keys())
+        # self.vocab_words = list(tokenizer.vocab.keys())
+        self.vocab_words = list(tokenizer.get_vocab().keys())
 
     def mask_tokens(self, tokens, rng, **kwargs):
         special_tokens = ['<mask>', '<s>', '</s>', '<pad>', '<unk>']  # + self.tokenizer.tokenize(' ')
@@ -403,7 +404,7 @@ class NGramMaskGenerator:
                 if w_cnt >= num_to_predict:
                     break
 
-        target_labels = [self.tokenizer.vocab[x] if x else 0 for x in target_labels]
+        target_labels = [self.tokenizer.get_vocab()[x] if x else 0 for x in target_labels]
         return tokens, target_labels
 
     def _choice(self, rng, data, p):

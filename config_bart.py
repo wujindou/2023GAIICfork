@@ -6,6 +6,7 @@ class Config(dict):
               2: {'n_epoch':50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
              }
         self['n_epoch'] = hp[version].get('n_epoch', 50)
+        self['pre_n_epoch'] = hp[version].get('n_epoch', 150)
         self['n_layer'] = hp[version].get('n_layer', 6)
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
@@ -28,8 +29,7 @@ class Config(dict):
     def __init__(self, version, seed=0):
         self['lr'] = 1e-4
         self['model_dir'] = './checkpoint/%d'%version
-        if seed>0:
-            self['model_dir'] += '_%d'%seed
+        self['pre_model_dir'] = './pretrain/%d'%version
         self['output_dir'] = './outputs/%d'%version
         
         self.version_config(version)

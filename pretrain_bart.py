@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import numpy as np 
 import torch
@@ -20,7 +20,7 @@ def train():
     if WANDB:
         wandb.init(
                 project="2023GAIIC",
-                name="bart",
+                name="pre_bart",
         )
 
     train_data = NgramData(conf['pretrain_file'])
@@ -41,7 +41,7 @@ def train():
     writer = SummaryWriter(conf['model_dir'])
     
     Path(conf['model_dir']).mkdir(exist_ok=True, parents=True)
-    for epoch in range(start_epoch, conf['n_epoch']):
+    for epoch in range(start_epoch, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
         for (source, mask, targets) in tqdm(train_loader):
@@ -64,7 +64,7 @@ def train():
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
 
         if epoch%5==0:
-            checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
+            checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
 
         # scheduler.step()
         if WANDB:

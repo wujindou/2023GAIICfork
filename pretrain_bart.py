@@ -34,23 +34,23 @@ def train():
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
 
-    start_epoch = 0
+    start_epoch = 145
     
+    checkpoint.resume(file_path="./pretrain/1/model_145.pt")
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['pre_model_dir'])
     
     Path(conf['pre_model_dir']).mkdir(exist_ok=True, parents=True)
-    for epoch in range(start_epoch, conf['pre_n_epoch']):
+    for epoch in range(start_epoch+1, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
-        for (source, mask, targets) in tqdm(train_loader):
+        for (source, targets) in tqdm(train_loader):
             source = to_device(source, 'cuda:0')
-            mask = to_device(mask, 'cuda:0')
             targets = to_device(targets, 'cuda:0')
             step.forward(source.shape[0])
 
-            loss = model(source, mask, targets).loss
+            loss = model(source, targets).loss
             
             loss = loss.mean()
             loss.backward()

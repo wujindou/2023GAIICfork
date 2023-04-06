@@ -1,17 +1,17 @@
 class Config(dict):
     def version_config(self, version):
-        batch = 96
-        val_batch = 48
+        batch = 160
+        val_batch = 80
         hp = {1: {'n_epoch':50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
               2: {'n_epoch':50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
              }
         self['n_epoch'] = hp[version].get('n_epoch', 50)
-        self['pre_n_epoch'] = hp[version].get('n_epoch', 150)
+        self['pre_n_epoch'] = hp[version].get('n_epoch', 50)
         self['n_layer'] = hp[version].get('n_layer', 6)
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
         self['w_g'] = 1
-        self['awp_start'] = 12
+        self['awp_start'] = 6
 
         #请自己造训练测试集
         self['pretrain_file'] = 'data/data.csv'

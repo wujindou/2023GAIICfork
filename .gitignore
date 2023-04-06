@@ -10,3 +10,4 @@ __pycache__/
 wandb/
 checkpoint
 data
+*.csv

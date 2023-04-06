@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -82,10 +82,11 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.005)
 
     start_epoch = 0
-    
+
+    checkpoint.resume(file_path="./pretrain/1/model_150.pt")
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['model_dir'])
@@ -126,8 +127,7 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
         ema.apply_shadow()
-        if epoch>100:
-        # if (epoch%3==0 and epoch >= 24) or epoch%6==0:
+        if epoch%3==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             metrics = evaluate(model, valid_loader)
@@ -170,8 +170,8 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
-train()
-# inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+# train()
+inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])

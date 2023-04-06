@@ -45,6 +45,6 @@ class PretrainBartModel(nn.Module):
         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
         self.model = BartForConditionalGeneration.from_pretrained("./custom_bart")
 
-    def forward(self, inputs, attn_mask, outputs=None, infer=False):
-        loss = self.model(input_ids=inputs, attention_mask=attn_mask, labels=outputs)
+    def forward(self, inputs, outputs=None, infer=False):
+        loss = self.model(input_ids=inputs, labels=outputs)
         return loss

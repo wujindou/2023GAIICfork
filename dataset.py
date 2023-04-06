@@ -126,10 +126,9 @@ class NgramData(BaseDataset):
         text1_ids, out1_ids = self.random_mask(text1_ids)
         text2_ids, out2_ids = self.random_mask(text2_ids)
         input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
-        token_type_ids=[0]*(len(text1_ids)+2)+[1]*(len(text2_ids)+1)
         labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
-        assert len(input_ids)==len(token_type_ids)==len(labels)
-        return torch.LongTensor(input_ids), torch.LongTensor(token_type_ids), torch.LongTensor(labels)
+        assert len(input_ids)==len(labels)
+        return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []

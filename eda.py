@@ -29,8 +29,8 @@ def hist(csv_file):
     print("The minimum output length is: ",np.array(target_len).min())
     print("The average output length is: ",np.array(target_len).mean())
     print("The mode of output length is: ",np.argmax(np.bincount(np.array(target_len))))
-    plt.hist(source_len,bins=5,alpha=0.5)
-    plt.hist(target_len,bins=5,alpha=0.5)
+    plt.hist(source_len,bins=25,alpha=0.5)
+    plt.hist(target_len,bins=25,alpha=0.5)
     plt.show()
 
 def count_numbers(csv_file):
@@ -47,5 +47,5 @@ def count_numbers(csv_file):
         print(f"{number}: {frequency}")
     print(f"There are {len(set(numbers))} kinds of numbers")
 
-count_numbers("./data/count.csv")
-hist("./data/count.csv")
+count_numbers("./data/raw.csv")
+hist("./data/raw.csv")

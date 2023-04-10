@@ -67,7 +67,7 @@ def train():
     train_data = BartDataset(conf['train_file'])
     valid_data = BartDataset(conf['valid_file'])
 
-    train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
+    train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=True)
     valid_loader = DataLoader(valid_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
 
     model = get_model()

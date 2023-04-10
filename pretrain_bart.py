@@ -57,7 +57,7 @@ def train():
             with autocast():
                 loss = model(source, targets).loss
                 loss = loss.mean() / accumulation_steps
-            loss.backward(torch.ones_like(loss))
+            loss.backward()
             if ((i+1) % accumulation_steps)==0:
                 optimizer.step()
                 optimizer.zero_grad()
@@ -66,10 +66,10 @@ def train():
                 logger.log(step.value, loss.item())
                 if WANDB:
                     wandb.log({'step': step.value})
-                    wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
+                    wandb.log({'train_loss': loss.item()*accumulation_steps, 'lr': optimizer.param_groups[0]['lr']})
 
         if epoch%5==0:
-            checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
+            # checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             val_losses = []
             for (val_source, val_targets) in tqdm(val_loader):
@@ -89,7 +89,6 @@ def train():
                 checkpoint.save(conf['pre_model_dir']+'/model_loss_%.4f.pt'%val_losses)
             model.train()
 
-        # scheduler.step()
         if WANDB:
             wandb.log({'epoch': epoch})
     logger.close()

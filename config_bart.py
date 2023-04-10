@@ -28,7 +28,7 @@ class Config(dict):
         self['pad_id'] = 1
         
     def __init__(self, version, seed=0):
-        self['lr'] = 3e-5
+        self['lr'] = 1e-3
         self['model_dir'] = './checkpoint/%d'%version
         self['grid_dir'] = './grid/%d'%version
         self['pre_model_dir'] = './pretrain/%d'%version

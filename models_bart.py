@@ -16,7 +16,7 @@ class CustomBartModel(nn.Module):
         self.sos_id = sos_id
         self.eos_id = eos_id
         self.max_l = max_l
-        self.beam_size = 5
+        self.beam_size = 2
 
         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
         self.model = BartForConditionalGeneration.from_pretrained("./custom_bart")
@@ -40,10 +40,9 @@ class PretrainBartModel(nn.Module):
         self.pad_id = pad_id
         self.sos_id = sos_id
         self.eos_id = eos_id
-        self.beam_size = 5
 
-        self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_large')
-        self.model = BartForConditionalGeneration.from_pretrained("./custom_pretrain_large")
+        self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain')
+        self.model = BartForConditionalGeneration.from_pretrained("./custom_pretrain")
 
     def forward(self, inputs, outputs=None, infer=False):
         loss = self.model(input_ids=inputs, labels=outputs)

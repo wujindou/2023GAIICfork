@@ -85,7 +85,7 @@ class NgramData(BaseDataset):
         # self.data = pd.read_csv(path,header=None)
         with open(path,'r') as f:
             self.data = f.readlines()
-        self.tk = BartTokenizer.from_pretrained('./custom_bart')
+        self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
 

@@ -39,7 +39,7 @@ def train():
 
     start_epoch = 0
     best_loss = 100.
-    accumulation_steps = 8.
+    accumulation_steps = 1.
 
     # checkpoint.resume(file_path="./pretrain/1/model_145.pt")
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
@@ -63,10 +63,10 @@ def train():
                 optimizer.zero_grad()
 
             if step.value%100==0:
-                logger.log(step.value, loss.item())
+                logger.log(step.value, loss.item()*accumulation_steps)
                 if WANDB:
                     wandb.log({'step': step.value})
-                    wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
+                    wandb.log({'train_loss': loss.item()*accumulation_steps, 'lr': optimizer.param_groups[0]['lr']})
 
         if epoch%5==0:
             checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)

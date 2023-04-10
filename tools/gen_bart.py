@@ -33,6 +33,6 @@ tokenizer.save_model(path)
 tokenizer = BartTokenizer.from_pretrained(path)
 tokenizer.save_pretrained(path)
 
-model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
+model = BartForConditionalGeneration.from_pretrained("../bart-base-chinese")
 model.resize_token_embeddings(tokenizer.vocab_size)
 model.save_pretrained(path)

@@ -78,40 +78,14 @@ class BartDataset(BaseDataset):
         return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(
             source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
 
-
-# class NgramData(BaseDataset):
-#     def __init__(self, path: str):
-#         super().__init__()
-#         self.data = []
-#         with open(path) as f:
-#             for line in f:
-#                 line = line.strip('\n').replace('\n','')
-#                 self.data.append(line)
-#         self.max_len = 150
-#         self.tokenizer = BartTokenizer.from_pretrained('./custom_bart')
-#         self.mask_gen = NGramMaskGenerator(self.tokenizer, max_gram=4, max_seq_len=150)
-#
-#     def _try_getitem(self, idx):
-#         data = self.data[idx]
-#         data_token = self.tokenizer.tokenize(data)
-#         data_token, lm_labels = self.mask_gen.mask_tokens(data_token, random)
-#         data_ids = self.tokenizer.convert_tokens_to_ids(data_token)
-#         features = OrderedDict(input_ids=data_ids,
-#                                input_mask=[1] * len(data_ids),
-#                                labels=lm_labels)
-#
-#         torch.set_printoptions(profile="full")
-#         for f in features:
-#             features[f] = torch.LongTensor(features[f] + [0] * (self.max_len - len(data_ids)))
-#         return features["input_ids"], features["input_mask"], features["labels"]
-
 class NgramData(BaseDataset):
     #传入句子对列表
     def __init__(self, path):
         super().__init__()
-        self.data = pd.read_csv(path,header=None)
+        # self.data = pd.read_csv(path,header=None)
+        with open(path,'r') as f:
+            self.data = f.readlines()
         self.tk = BartTokenizer.from_pretrained('./custom_bart')
-        self.maxLen = 224
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
 
@@ -119,23 +93,31 @@ class NgramData(BaseDataset):
         return len(self.data)
 
     def _try_getitem(self, idx):
-        text1, text2, = self.data.iloc[idx]
-        text1_ids,text2_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids, self.tk(text2, max_length=80, padding='max_length', truncation=True).input_ids
-        if random.random()>0.5:
-            text1_ids,text2_ids = text2_ids,text1_ids 
+        # text1, text2, = self.data.iloc[idx]
+        text1 = self.data[idx]
+        # if pd.isna(text2):
+        text1_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids
         text1_ids, out1_ids = self.random_mask(text1_ids)
-        text2_ids, out2_ids = self.random_mask(text2_ids)
-        input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
-        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id]
+        labels = [-100] + out1_ids + [-100]
         assert len(input_ids)==len(labels)
         return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        # text1_ids, text2_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids, self.tk(text2, max_length=80, padding='max_length', truncation=True).input_ids
+        # if random.random()>0.5:
+        #     text1_ids,text2_ids = text2_ids,text1_ids 
+        # text1_ids, out1_ids = self.random_mask(text1_ids)
+        # text2_ids, out2_ids = self.random_mask(text2_ids)
+        # input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
+        # labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        # assert len(input_ids)==len(labels)
+        # return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []
         rands = np.random.random(len(text_ids))
         idx=0
         while idx<len(rands):
-            if rands[idx]<0.15:#需要mask
+            if rands[idx]<0.2:#需要mask
                 ngram=np.random.choice([1,2,3], p=[0.7,0.2,0.1])#若要mask，进行x_gram mask的概率
                 if ngram==3 and len(rands)<7:#太大的gram不要应用于过短文本
                     ngram=2

@@ -54,7 +54,7 @@ def evaluate(model, loader, output_file=None, n=-1):
     return metrics
 
 def get_model():
-    return CustomBartModel(n_token=conf['n_token'])
+    return CustomBartModel()
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def train():
@@ -75,18 +75,19 @@ def train():
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
     model.to('cuda:0')
-    ema = EMA(model, 0.999, device="cuda:0")
-    ema.register()
+    # ema = EMA(model, 0.999, device="cuda:0")
+    # ema.register()
     fgm = FGM(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.005)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
+    checkpoint.resume(file_path="./pretrain/1/model_70.pt")
     start_epoch = 0
+    # checkpoint.resume(file_path="./checkpoint/2/model_9.pt")
 
-    checkpoint.resume(file_path="./pretrain/1/model_150.pt")
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['model_dir'])
@@ -118,7 +119,7 @@ def train():
             fgm.restore()
 
             optimizer.step() #优化一次
-            ema.update()
+            # ema.update()
             optimizer.zero_grad() #清空梯度
 
             if step.value%100==0:
@@ -126,22 +127,23 @@ def train():
                 if WANDB:
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
-        ema.apply_shadow()
-        if epoch%3==0:
+        # ema.apply_shadow()
+        # if epoch > 100:
+        if epoch%3==0 or epoch > 20:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
-            model.eval()
-            metrics = evaluate(model, valid_loader)
-            logger.log('valid', step.value, metrics.value())
-            if WANDB:
-                wandb.log({'valid_metric': metrics.value()})
-            writer.add_scalars('valid metric', metrics.value(), step.value)
-            checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
-            model.train()
+            # model.eval()
+            # metrics = evaluate(model, valid_loader)
+            # logger.log('valid', step.value, metrics.value())
+            # if WANDB:
+            #     wandb.log({'valid_metric': metrics.value()})
+            # writer.add_scalars('valid metric', metrics.value(), step.value)
+            # checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
+            # model.train()
 
         # scheduler.step()
         if WANDB:
             wandb.log({'epoch': epoch})
-        ema.restore()
+        # ema.restore()
     logger.close()
     writer.close()
     
@@ -150,6 +152,8 @@ def inference(model_file, data_file):
     test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=12, drop_last=False)
 
     model = get_model()
+    averaged_weights = torch.load('./averaged_model_weights.pt')
+    # model.load_state_dict(averaged_weights)
     checkpoint = Checkpoint(model = model)
     checkpoint.resume(model_file)
     
@@ -170,8 +174,8 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 1
+version = 2
 conf = Config(version)
 
 # train()
-inference('checkpoint/%d/model_cider.pt'%version, conf['test_file'])
+inference('checkpoint/%d/model_39.pt'%version, conf['test_file'])

@@ -1,5 +1,6 @@
 import pandas as pd
-data = pd.read_csv("./data.csv", header=None)
-for i in range(22999):
+import numpy as np
+data = pd.read_csv("../data/data.csv", header=None)
+for i in range(23000):
     a,b = data.iloc[i]
-    print(a,b)
+    print(pd.isna(b))

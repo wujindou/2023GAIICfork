@@ -1,7 +1,7 @@
 class Config(dict):
     def version_config(self, version):
-        batch = 160
-        val_batch = 80
+        batch = 64
+        val_batch = 32
         hp = {1: {'n_epoch':50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
               2: {'n_epoch':50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
              }
@@ -14,21 +14,23 @@ class Config(dict):
         self['awp_start'] = 6
 
         #请自己造训练测试集
-        self['pretrain_file'] = 'data/data.csv'
-        self['train_file'] = 'data/train_9.csv'
-        self['valid_file'] = 'data/val_9.csv'
+        self['pretrain_file'] = 'data/pretrain.txt'
+        self['preval_file'] = 'data/preval.txt'
+        self['train_file'] = 'data/raw.csv'
+        self['valid_file'] = 'data/val_0.csv'
         self['test_file'] = 'data/preliminary_a_test.csv'
     
         self['input_l'] = 150
         self['output_l'] = 80
-        self['n_token'] = 1560
+        self['n_token'] = 1562
         self['sos_id'] = 0
         self['eos_id'] = 2
         self['pad_id'] = 1
         
     def __init__(self, version, seed=0):
-        self['lr'] = 1e-4
+        self['lr'] = 3e-5
         self['model_dir'] = './checkpoint/%d'%version
+        self['grid_dir'] = './grid/%d'%version
         self['pre_model_dir'] = './pretrain/%d'%version
         self['output_dir'] = './outputs/%d'%version
         

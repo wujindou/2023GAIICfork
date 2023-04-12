@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import numpy as np 
 import torch
@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.cuda.amp import autocast as autocast
+from torch.cuda.amp import GradScaler
 from pathlib import Path
 from tqdm import tqdm
 
@@ -21,7 +22,7 @@ def train():
     if WANDB:
         wandb.init(
                 project="2023GAIIC",
-                name="pre_bart_large",
+                name="pre_bart",
         )
 
     train_data = NgramData(conf['pretrain_file'])
@@ -36,12 +37,14 @@ def train():
     model.to('cuda')
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.003, epochs=conf['n_epoch'], steps_per_epoch=min(500, len(train_loader)), pct_start=0.05)
+    # scaler = GradScaler()
 
     start_epoch = 0
     best_loss = 100.
-    accumulation_steps = 1.
+    accumulation_steps = 8.
 
-    # checkpoint.resume(file_path="./pretrain/1/model_145.pt")
+    # checkpoint.resume(file_path="./pretrain/2/model_90.pt")
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['pre_model_dir'])
@@ -54,22 +57,28 @@ def train():
             source = to_device(source, 'cuda')
             targets = to_device(targets, 'cuda')
             step.forward(source.shape[0])
-            with autocast():
-                loss = model(source, targets).loss
-                loss = loss.mean() / accumulation_steps
+            # with autocast():
+            loss = model(source, targets).loss
+            loss = loss.mean() / accumulation_steps
             loss.backward()
             if ((i+1) % accumulation_steps)==0:
+                torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=10, norm_type=2)
+                # scaler.scale(loss).backward()
                 optimizer.step()
+                scheduler.step()
                 optimizer.zero_grad()
+                # scaler.step(optimizer)
+                # scaler.update()
 
-            if step.value%100==0:
+            if step.value%50==0:
                 logger.log(step.value, loss.item()*accumulation_steps)
                 if WANDB:
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item()*accumulation_steps, 'lr': optimizer.param_groups[0]['lr']})
 
         if epoch%5==0:
-            # checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
+            if epoch%10==0:
+                checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
             model.eval()
             val_losses = []
             for (val_source, val_targets) in tqdm(val_loader):
@@ -94,7 +103,7 @@ def train():
     logger.close()
     writer.close()
 
-version = 1
+version = 2
 conf = Config(version)
 
 train()

@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import numpy as np 
 import torch
@@ -31,7 +31,6 @@ def array2str(arr):
         out = '0'
     return out.strip()
 
-
 def evaluate(model, loader, output_file=None, n=-1):
     metrics = Smoother(100)
     res, gts = [], {}
@@ -41,10 +40,13 @@ def evaluate(model, loader, output_file=None, n=-1):
             break
         source = to_device(source, 'cuda:0')
         mask = to_device(mask, 'cuda:0')
-        pred = model(source, mask)
+        pred = model(source, mask, infer=True)
         pred = pred.cpu().numpy()
+        # pred = np.array(pred)
         for i in range(pred.shape[0]):
+            print(targets[i])
             res.append({'image_id':tot, 'caption': [array2str(pred[i][1:-1])]})
+            print(array2str(pred[i][1:-1]))
             gts[tot] = [array2str(targets[i])]
             tot += 1
     CiderD_scorer = CiderD(df='corpus', sigma=15)
@@ -79,12 +81,14 @@ def train():
     # ema.register()
     fgm = FGM(model)
 
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 12, 24, 40], gamma=0.8)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 12, 18, 24, 35], gamma=0.5)
+    # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0008, epochs=conf['n_epoch'], steps_per_epoch=min(500, len(train_loader)), pct_start=0.05)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
 
-    checkpoint.resume(file_path="./pretrain/1/model_70.pt")
+    # checkpoint.resume(file_path="./pretrain/2/model_loss_0.3469.pt")
     start_epoch = 0
     # checkpoint.resume(file_path="./checkpoint/2/model_9.pt")
 
@@ -118,9 +122,10 @@ def train():
             adv_loss.backward()
             fgm.restore()
 
-            optimizer.step() #优化一次
+            optimizer.step()
+            # scheduler.step()
             # ema.update()
-            optimizer.zero_grad() #清空梯度
+            optimizer.zero_grad()
 
             if step.value%100==0:
                 logger.log(step.value, loss.item())
@@ -129,18 +134,17 @@ def train():
                     wandb.log({'train_loss': loss.item(), 'lr': optimizer.param_groups[0]['lr']})
         # ema.apply_shadow()
         # if epoch > 100:
-        if epoch%3==0 or epoch > 20:
+        if epoch%1==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
-            # model.eval()
-            # metrics = evaluate(model, valid_loader)
-            # logger.log('valid', step.value, metrics.value())
-            # if WANDB:
-            #     wandb.log({'valid_metric': metrics.value()})
-            # writer.add_scalars('valid metric', metrics.value(), step.value)
-            # checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
-            # model.train()
+            model.eval()
+            metrics = evaluate(model, valid_loader)
+            logger.log('valid', step.value, metrics.value())
+            if WANDB:
+                wandb.log({'valid_metric': metrics.value()})
+            writer.add_scalars('valid metric', metrics.value(), step.value)
+            checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
+            model.train()
 
-        # scheduler.step()
         if WANDB:
             wandb.log({'epoch': epoch})
         # ema.restore()
@@ -177,5 +181,5 @@ def inference(model_file, data_file):
 version = 2
 conf = Config(version)
 
-# train()
-inference('checkpoint/%d/model_39.pt'%version, conf['test_file'])
+train()
+# inference('checkpoint/%d/model_39.pt'%version, conf['test_file'])

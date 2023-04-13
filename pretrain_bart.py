@@ -35,22 +35,22 @@ def train():
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
     model.to('cuda')
-    accumulation_steps = 8.
+    accumulation_steps = 2.
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     # scaler = GradScaler()
 
-    start_epoch = 0
+    start_epoch = 110
     best_loss = 100.
 
-    # checkpoint.resume(file_path="./pretrain/2/model_90.pt")
+    checkpoint.resume(file_path="./pretrain/1/model_110.pt")
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['pre_model_dir'])
     
     Path(conf['pre_model_dir']).mkdir(exist_ok=True, parents=True)
-    for epoch in range(start_epoch, conf['pre_n_epoch']):
+    for epoch in range(start_epoch+1, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
         for i, (source, targets) in enumerate(tqdm(train_loader)):

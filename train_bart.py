@@ -86,7 +86,7 @@ def train():
 
     awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
 
-    checkpoint.resume(file_path="./pretrain/2/model_loss_0.7395.pt")
+    checkpoint.resume(file_path="./pretrain/1/model_loss_0.8469.pt")
     start_epoch = 0
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')

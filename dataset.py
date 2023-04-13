@@ -87,7 +87,8 @@ class BartDataset(BaseDataset):
             source.extend([self.pad_id] * (self.input_l - len(source)))
         if len(self.samples[idx]) < 3:
             return np.array(source)[:self.input_l]
-        target = [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
+        target = [self.sos_id] + [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
+        # target = [int(x) for x in self.samples[idx][2].split()]
         if len(target) < self.output_l:
             target.extend([self.pad_id] * (self.output_l - len(target)))
         input_ids = np.array(source)[:self.input_l]
@@ -117,20 +118,20 @@ class NgramData(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        text1 = self.samples.iloc[idx, 0]
-        text2 = self.samples.iloc[idx, 1]
+        text1 = self.samples.iloc[idx, 1]
+        text2 = self.samples.iloc[idx, 2]
 
-        if pd.isna(text2):
-            text1 = [int(x) for x in text1.split()]
-            input_ids, out1_ids = self.random_mask(text1)
-            input_ids = [self.sos_id] + text1 + [self.eos_id]
-            labels = [-100] + out1_ids + [-100]
-            if len(input_ids) < self.input_l:
-                input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-            if len(labels) < self.input_l:
-                labels.extend([-100] * (self.input_l - len(labels)))
-            assert len(input_ids)==len(labels)
-            return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        # if pd.isna(text2):
+        #     text1 = [int(x) for x in text1.split()]
+        #     input_ids, out1_ids = self.random_mask(text1)
+        #     input_ids = [self.sos_id] + text1 + [self.eos_id]
+        #     labels = [-100] + out1_ids + [-100]
+        #     if len(input_ids) < self.input_l:
+        #         input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
+        #     if len(labels) < self.input_l:
+        #         labels.extend([-100] * (self.input_l - len(labels)))
+        #     assert len(input_ids)==len(labels)
+        #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
         text1 = [int(x) for x in text1.split()]
         text2 = [int(x) for x in text2.split()]
         if random.random()>0.5:

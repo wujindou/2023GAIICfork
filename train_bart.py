@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -44,9 +44,7 @@ def evaluate(model, loader, output_file=None, n=-1):
         pred = pred.cpu().numpy()
         # pred = np.array(pred)
         for i in range(pred.shape[0]):
-            print(targets[i])
-            res.append({'image_id':tot, 'caption': [array2str(pred[i][1:-1])]})
-            print(array2str(pred[i][1:-1]))
+            res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
             tot += 1
     CiderD_scorer = CiderD(df='corpus', sigma=15)
@@ -88,9 +86,8 @@ def train():
 
     awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
 
-    # checkpoint.resume(file_path="./pretrain/2/model_loss_0.3469.pt")
+    checkpoint.resume(file_path="./pretrain/2/model_loss_0.7395.pt")
     start_epoch = 0
-    # checkpoint.resume(file_path="./checkpoint/2/model_9.pt")
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)

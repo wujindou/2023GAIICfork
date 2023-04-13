@@ -1,9 +1,9 @@
 class Config(dict):
     def version_config(self, version):
         batch = 64
-        val_batch = 32
-        hp = {1: {'n_epoch':151, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
-              2: {'n_epoch':151, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
+        val_batch = 16
+        hp = {1: {'n_epoch': 151, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
+              2: {'n_epoch': 151, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
              }
         self['n_epoch'] = hp[version].get('n_epoch', 151)
         self['pre_n_epoch'] = hp[version].get('n_epoch', 151)
@@ -11,7 +11,7 @@ class Config(dict):
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
         self['w_g'] = 1
-        self['awp_start'] = 3
+        self['awp_start'] = 2
 
         #请自己造训练测试集
         self['pretrain_file'] = 'data/pretrain.csv'
@@ -28,7 +28,7 @@ class Config(dict):
         self['eos_id'] = 2
         
     def __init__(self, version, seed=0):
-        self['lr'] = 1e-4
+        self['lr'] = 2e-4
         self['model_dir'] = './checkpoint/%d'%version
         self['grid_dir'] = './grid/%d'%version
         self['pre_model_dir'] = './pretrain/%d'%version

@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -35,14 +35,14 @@ def train():
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
     model.to('cuda')
+    accumulation_steps = 8.
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.003, epochs=conf['n_epoch'], steps_per_epoch=min(500, len(train_loader)), pct_start=0.05)
+    # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     # scaler = GradScaler()
 
     start_epoch = 0
     best_loss = 100.
-    accumulation_steps = 8.
 
     # checkpoint.resume(file_path="./pretrain/2/model_90.pt")
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
@@ -65,7 +65,7 @@ def train():
                 torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=10, norm_type=2)
                 # scaler.scale(loss).backward()
                 optimizer.step()
-                scheduler.step()
+                # scheduler.step()
                 optimizer.zero_grad()
                 # scaler.step(optimizer)
                 # scaler.update()
@@ -103,7 +103,7 @@ def train():
     logger.close()
     writer.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
 train()

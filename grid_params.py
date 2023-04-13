@@ -44,7 +44,7 @@ def evaluate(model, loader, output_file=None, n=-1):
         pred = model(source, mask)
         pred = pred.cpu().numpy()
         for i in range(pred.shape[0]):
-            res.append({'image_id':tot, 'caption': [array2str(pred[i][1:-1])]})
+            res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
             gts[tot] = [array2str(targets[i])]
             tot += 1
     CiderD_scorer = CiderD(df='corpus', sigma=15)
@@ -54,7 +54,7 @@ def evaluate(model, loader, output_file=None, n=-1):
     return metrics
 
 def get_model():
-    return CustomBartModel(n_token=conf['n_token'])
+    return CustomBartModel()
     # return BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
 def grid_params():
@@ -73,7 +73,7 @@ def grid_params():
     model = torch.nn.DataParallel(model)
     model.to('cuda:0')
 
-    checkpoint.resume(file_path="/root/2023GAIIC/checkpoint/1/model_cider.pt")
+    checkpoint.resume(file_path="/root/2023GAIIC/checkpoint/2/model_cider.pt")
     logger = Logger(conf['grid_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['grid_dir'])

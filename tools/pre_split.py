@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.model_selection import KFold
 
 # Set the path to the raw CSV file
-raw_data_path = "../data/data.csv"
+raw_data_path = "../data/raw.csv"
 
 # Read the raw CSV file into a Pandas DataFrame
 raw_data = pd.read_csv(raw_data_path)

@@ -15,7 +15,7 @@ from dataset import BartDataset
 from config_bart import Config
 from losses import CE
 
-from transformers import BartConfig, BartForConditionalGeneration
+from transformers import BartConfig, BartForConditionalGeneration, BartTokenizer
 
 from evaluate import CiderD
 
@@ -26,12 +26,14 @@ def array2str(arr):
             break
         if arr[i]==conf['sos_id']:
             continue
+        print(arr[i])
         out += str(int(arr[i])) + ' '
     if len(out.strip())==0:
         out = '0'
     return out.strip()
 
 def evaluate(model, loader, output_file=None, n=-1):
+    tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_large/')
     metrics = Smoother(100)
     res, gts = [], {}
     tot = 0
@@ -41,11 +43,13 @@ def evaluate(model, loader, output_file=None, n=-1):
         source = to_device(source, 'cuda:0')
         mask = to_device(mask, 'cuda:0')
         pred = model(source, mask, infer=True)
-        pred = pred.cpu().numpy()
-        # pred = np.array(pred)
+        # pred = pred.cpu().numpy()
+        pred = np.array(pred)
+        targets = tokenizer.batch_decode(targets, skip_special_tokens=True)
         for i in range(pred.shape[0]):
-            res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
-            gts[tot] = [array2str(targets[i])]
+            # res.append({'image_id':tot, 'caption': [array2str(pred[i])]})
+            res.append({'image_id':tot, 'caption': [pred[i]]})
+            gts[tot] = [targets[i]]
             tot += 1
     CiderD_scorer = CiderD(df='corpus', sigma=15)
     cider_score, cider_scores = CiderD_scorer.compute_score(gts, res)
@@ -84,9 +88,9 @@ def train():
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 12, 18, 24, 35], gamma=0.5)
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0008, epochs=conf['n_epoch'], steps_per_epoch=min(500, len(train_loader)), pct_start=0.05)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
-    checkpoint.resume(file_path="./pretrain/1/model_loss_0.8469.pt")
+    checkpoint.resume(file_path="./pretrain/2/")
     start_epoch = 0
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
@@ -124,7 +128,7 @@ def train():
             # ema.update()
             optimizer.zero_grad()
 
-            if step.value%100==0:
+            if step.value%50==0:
                 logger.log(step.value, loss.item())
                 if WANDB:
                     wandb.log({'step': step.value})
@@ -153,8 +157,6 @@ def inference(model_file, data_file):
     test_loader = DataLoader(test_data, batch_size=conf['valid_batch'], shuffle=False, num_workers=12, drop_last=False)
 
     model = get_model()
-    averaged_weights = torch.load('./averaged_model_weights.pt')
-    # model.load_state_dict(averaged_weights)
     checkpoint = Checkpoint(model = model)
     checkpoint.resume(model_file)
     
@@ -169,14 +171,14 @@ def inference(model_file, data_file):
         source = to_device(source, 'cuda:0')
         mask = to_device(mask, 'cuda:0')
         pred = model(source, mask, infer=True)
-        pred = np.array(pred)
+        pred = pred.cpu().numpy()
         for i in range(pred.shape[0]):
-            writer.writerow([tot, pred[i]])
+            writer.writerow([tot, array2str(pred[i])])
             tot += 1
     fp.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
 train()
-# inference('checkpoint/%d/model_39.pt'%version, conf['test_file'])
+# inference('checkpoint/%d/model_6.pt'%version, conf['test_file'])

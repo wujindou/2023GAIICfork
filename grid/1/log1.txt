@@ -4,3 +4,17 @@ lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 
 valid cider:2.6875515446240827 
 lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:51 pre_n_epoch:51 n_layer:6 batch:64 valid_batch:32 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/train_0.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
 valid cider:2.6912379113386 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.7428162621509036 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.796807232998271 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.8026680728827005 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.7919748248540013 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.7968072329982707 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.8026680728827 
+lr:0.0001 model_dir:./checkpoint/1 grid_dir:./grid/1 pre_model_dir:./pretrain/1 output_dir:./outputs/1 n_epoch:6 pre_n_epoch:6 n_layer:6 batch:64 valid_batch:16 w_g:1 awp_start:2 pretrain_file:data/pretrain.csv preval_file:data/preval.csv train_file:data/raw.csv valid_file:data/val_0.csv test_file:data/preliminary_a_test.csv input_l:150 output_l:80 n_token:1562 sos_id:0 pad_id:1 eos_id:2 
+valid cider:2.8026680728827005 

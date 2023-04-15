@@ -59,7 +59,7 @@ class BartDataset(BaseDataset):
         with open(data_file, 'r') as fp:
             reader = csv.reader(fp)
             self.samples = [row for row in reader]
-            # self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_cn')
+            self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_large/')
             self.input_l = 150
             self.output_l = 80
             self.sos_id = 0
@@ -70,32 +70,32 @@ class BartDataset(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        # source = self.samples[idx][1]
-        # source_ids = self.tokenizer(source, max_length=150, padding='max_length', truncation=True)
-        # try:
-        #     target = self.samples[idx][2]
-        # except:
-        #     return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask'])
-        # target_ids = self.tokenizer(target, max_length=80, padding='max_length', truncation=True)
-        # print(source_ids['input_ids'])
-        # print(source_ids['attention_mask'])
-        # print(target_ids['input_ids'])
-        # return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(
-        #     source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
-        source = [self.sos_id] + [int(x) for x in self.samples[idx][1].split()] + [self.eos_id]
-        if len(source) < self.input_l:
-            source.extend([self.pad_id] * (self.input_l - len(source)))
-        if len(self.samples[idx]) < 3:
-            return np.array(source)[:self.input_l]
-        target = [self.sos_id] + [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
-        # target = [int(x) for x in self.samples[idx][2].split()]
-        if len(target) < self.output_l:
-            target.extend([self.pad_id] * (self.output_l - len(target)))
-        input_ids = np.array(source)[:self.input_l]
-        attention_mask = np.array([1] * len(input_ids) + [0] * (self.input_l - len(input_ids)))
-        target_ids = np.array(target)[:self.output_l]
-        assert(len(input_ids)==len(attention_mask))
-        return input_ids, attention_mask, target_ids
+        source = self.samples[idx][1]
+        source_ids = self.tokenizer(source, max_length=150, padding='max_length', truncation=True)
+        try:
+            target = self.samples[idx][2]
+        except:
+            return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask'])
+        target_ids = self.tokenizer(target, max_length=80, padding='max_length', truncation=True)
+        # print(source_ids['input_ids'],source_ids['attention_mask'],target_ids['input_ids'])
+        return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
+        # source = [self.sos_id] + [int(x) for x in self.samples[idx][1].split()] + [self.eos_id]
+        # if len(source) < self.input_l:
+        #     source.extend([self.pad_id] * (self.input_l - len(source)))
+        # if len(self.samples[idx]) < 3:
+        #     input_ids = np.array(source)[:self.input_l]
+        #     attention_mask = np.array([1] * len(input_ids) + [0] * (self.input_l - len(input_ids)))
+        #     assert(len(input_ids)==len(attention_mask))
+        #     return input_ids, attention_mask
+        # target = [self.sos_id] + [int(x) for x in self.samples[idx][2].split()] + [self.eos_id]
+        # # target = [int(x) for x in self.samples[idx][2].split()]
+        # if len(target) < self.output_l:
+        #     target.extend([self.pad_id] * (self.output_l - len(target)))
+        # input_ids = np.array(source)[:self.input_l]
+        # attention_mask = np.array([1] * len(input_ids) + [0] * (self.input_l - len(input_ids)))
+        # target_ids = np.array(target)[:self.output_l]
+        # assert(len(input_ids)==len(attention_mask))
+        # return input_ids, attention_mask, target_ids
 
 class NgramData(BaseDataset):
     #传入句子对列表
@@ -104,10 +104,10 @@ class NgramData(BaseDataset):
         self.samples = pd.read_csv(path,header=None)
         # with open(path,'r') as f:
         #     self.data = f.readlines()
-        self.tk = BartTokenizer.from_pretrained('./custom_pretrain_cn')
+        self.tk = BartTokenizer.from_pretrained('./custom_pretrain_large/')
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
-        self.input_l = 224
+        self.input_l = 150
         self.output_l= 80
         self.sos_id = 0
         self.pad_id = 1
@@ -118,34 +118,33 @@ class NgramData(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        text1 = self.samples.iloc[idx, 1]
-        text2 = self.samples.iloc[idx, 2]
-
-        # if pd.isna(text2):
-        #     text1 = [int(x) for x in text1.split()]
-        #     input_ids, out1_ids = self.random_mask(text1)
-        #     input_ids = [self.sos_id] + text1 + [self.eos_id]
-        #     labels = [-100] + out1_ids + [-100]
-        #     if len(input_ids) < self.input_l:
-        #         input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        #     if len(labels) < self.input_l:
-        #         labels.extend([-100] * (self.input_l - len(labels)))
-        #     assert len(input_ids)==len(labels)
-        #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        text1 = [int(x) for x in text1.split()]
-        text2 = [int(x) for x in text2.split()]
-        if random.random()>0.5:
-            text1, text2 = text2, text1 
+        text1 = self.samples.iloc[idx, 0]
+        text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
         text1, out1_ids = self.random_mask(text1)
-        text2, out2_ids = self.random_mask(text2)
-        input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
-        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        input_ids = [self.sos_id] + text1 + [self.eos_id]
+        labels = [-100] + out1_ids + [-100]
         if len(input_ids) < self.input_l:
             input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
         if len(labels) < self.input_l:
             labels.extend([-100] * (self.input_l - len(labels)))
         assert len(input_ids)==len(labels)
         return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        # text1 = self.samples.iloc[idx, 0]
+        # # text2 = self.samples.iloc[idx, 2]
+
+        # # if pd.isna(text2):
+        # text1 = [int(x) for x in text1.split()]
+        # # if random.random()>0.5:
+        # #     text1, text2 = text2, text1 
+        # text1, out1_ids = self.random_mask(text1)
+        # input_ids = [self.sos_id] + text1 + [self.eos_id]
+        # labels = [-100] + out1_ids + [-100]
+        # if len(input_ids) < self.input_l:
+        #     input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
+        # if len(labels) < self.input_l:
+        #     labels.extend([-100] * (self.input_l - len(labels)))
+        # assert len(input_ids)==len(labels)
+        # return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []

@@ -48,7 +48,7 @@ tokenizer = BartTokenizer.from_pretrained(path)
 tokenizer.save_pretrained(path)
 
 # model = BartForConditionalGeneration.from_pretrained("../bart-base-chinese")
-model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
+model = BartForConditionalGeneration.from_pretrained("fnlp/bart-large-chinese")
 # model.encoder.resize_embeddings(tokenizer.vocab_size)
 # model.decoder.resize_embeddings(tokenizer.vocab_size)
 model.resize_token_embeddings(tokenizer.vocab_size)

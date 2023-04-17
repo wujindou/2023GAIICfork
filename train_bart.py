@@ -33,11 +33,7 @@ def array2str(arr):
     return out.strip()
 
 def evaluate(model, loader, output_file=None, n=-1):
-<<<<<<< HEAD
     tokenizer = BartTokenizer.from_pretrained('./custom_pretrain/')
-=======
-    tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_large/')
->>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
     metrics = Smoother(100)
     res, gts = [], {}
     tot = 0
@@ -94,12 +90,8 @@ def train():
 
     awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
-<<<<<<< HEAD
-    checkpoint.resume(file_path="./pretrain/2/model_loss_0.8248.pt")
-=======
-    checkpoint.resume(file_path="./pretrain/2/")
->>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
-    start_epoch = 0
+    checkpoint.resume(file_path="./checkpoint/1/model_6.pt")
+    start_epoch = 7
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
@@ -179,26 +171,16 @@ def inference(model_file, data_file):
         source = to_device(source, 'cuda:0')
         mask = to_device(mask, 'cuda:0')
         pred = model(source, mask, infer=True)
-<<<<<<< HEAD
         # pred = pred.cpu().numpy()
         pred = np.array(pred)
         for i in range(len(pred)):
             # writer.writerow([tot, array2str(pred[i])])
             writer.writerow([tot, pred[i]])
-=======
-        pred = pred.cpu().numpy()
-        for i in range(pred.shape[0]):
-            writer.writerow([tot, array2str(pred[i])])
->>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
             tot += 1
     fp.close()
 
 version = 1
 conf = Config(version)
 
-train()
-<<<<<<< HEAD
-# inference('checkpoint/%d/model_7.pt'%version, conf['test_file'])
-=======
-# inference('checkpoint/%d/model_6.pt'%version, conf['test_file'])
->>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
+# train()
+inference('checkpoint/%d/model_8.pt'%version, conf['test_file'])

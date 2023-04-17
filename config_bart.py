@@ -28,7 +28,7 @@ class Config(dict):
         self['eos_id'] = 2
         
     def __init__(self, version, seed=0):
-        self['lr'] = 2e-4
+        self['lr'] = 1e-4
         self['model_dir'] = './checkpoint/%d'%version
         self['grid_dir'] = './grid/%d'%version
         self['pre_model_dir'] = './pretrain/%d'%version

@@ -22,7 +22,7 @@ def train():
     if WANDB:
         wandb.init(
                 project="2023GAIIC",
-                name="pre_bart",
+                name="pre_bart_large",
         )
 
     train_data = NgramData(conf['pretrain_file'])
@@ -35,16 +35,27 @@ def train():
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
     model.to('cuda')
+<<<<<<< HEAD
     accumulation_steps = 1.
+=======
+    accumulation_steps = 8.
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
-    # scaler = GradScaler()
+    scaler = GradScaler()
 
+<<<<<<< HEAD
     start_epoch = 31
     best_loss = 100.
 
     checkpoint.resume(file_path="./pretrain/2/model_30.pt")
+=======
+    start_epoch = 26
+    best_loss = 100.
+
+    checkpoint.resume(file_path="./pretrain/2/model_25.pt")
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['pre_model_dir'])
@@ -57,18 +68,18 @@ def train():
             source = to_device(source, 'cuda')
             targets = to_device(targets, 'cuda')
             step.forward(source.shape[0])
-            # with autocast():
-            loss = model(source, targets).loss
-            loss = loss.mean() / accumulation_steps
-            loss.backward()
+            with autocast():
+                loss = model(source, targets).loss
+                loss = loss.mean() / accumulation_steps
+            # loss.backward()
+            scaler.scale(loss).backward()
             if ((i+1) % accumulation_steps)==0:
                 torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=10, norm_type=2)
-                # scaler.scale(loss).backward()
-                optimizer.step()
+                # optimizer.step()
                 # scheduler.step()
-                optimizer.zero_grad()
-                # scaler.step(optimizer)
-                # scaler.update()
+                # optimizer.zero_grad()
+                scaler.step(optimizer)
+                scaler.update()
 
             if step.value%50==0:
                 logger.log(step.value, loss.item()*accumulation_steps)

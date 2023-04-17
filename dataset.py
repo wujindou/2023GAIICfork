@@ -59,7 +59,11 @@ class BartDataset(BaseDataset):
         with open(data_file, 'r') as fp:
             reader = csv.reader(fp)
             self.samples = [row for row in reader]
+<<<<<<< HEAD
             self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain')
+=======
+            self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain_large/')
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
             self.input_l = 150
             self.output_l = 80
             self.sos_id = 0
@@ -71,7 +75,11 @@ class BartDataset(BaseDataset):
 
     def _try_getitem(self, idx):
         source = self.samples[idx][1]
+<<<<<<< HEAD
         source_ids = self.tokenizer(source, max_length=self.input_l, padding='max_length', truncation=True)
+=======
+        source_ids = self.tokenizer(source, max_length=150, padding='max_length', truncation=True)
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
         try:
             target = self.samples[idx][2]
         except:
@@ -104,7 +112,11 @@ class NgramData(BaseDataset):
         self.samples = pd.read_csv(path,header=None)
         # with open(path,'r') as f:
         #     self.data = f.readlines()
+<<<<<<< HEAD
         self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
+=======
+        self.tk = BartTokenizer.from_pretrained('./custom_pretrain_large/')
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
         self.input_l = 150
@@ -129,6 +141,7 @@ class NgramData(BaseDataset):
             labels.extend([-100] * (self.input_l - len(labels)))
         assert len(input_ids)==len(labels)
         return torch.LongTensor(input_ids), torch.LongTensor(labels)
+<<<<<<< HEAD
 
         # text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
         # if pd.isna(text2):
@@ -150,6 +163,18 @@ class NgramData(BaseDataset):
         # text2, out2_ids = self.random_mask(text2)
         # input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
         # labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+=======
+        # text1 = self.samples.iloc[idx, 0]
+        # # text2 = self.samples.iloc[idx, 2]
+
+        # # if pd.isna(text2):
+        # text1 = [int(x) for x in text1.split()]
+        # # if random.random()>0.5:
+        # #     text1, text2 = text2, text1 
+        # text1, out1_ids = self.random_mask(text1)
+        # input_ids = [self.sos_id] + text1 + [self.eos_id]
+        # labels = [-100] + out1_ids + [-100]
+>>>>>>> 295c39a5ef44db9702cf702f47dd8dddfbea2da5
         # if len(input_ids) < self.input_l:
         #     input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
         # if len(labels) < self.input_l:

@@ -73,7 +73,7 @@ def grid_params():
     model = torch.nn.DataParallel(model)
     model.to('cuda:0')
 
-    checkpoint.resume(file_path="/root/2023GAIIC/checkpoint/2/model_cider.pt")
+    checkpoint.resume(file_path="/root/2023GAIIC/checkpoint/2/model_6.pt")
     logger = Logger(conf['grid_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
     writer = SummaryWriter(conf['grid_dir'])

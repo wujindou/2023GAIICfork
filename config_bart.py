@@ -2,11 +2,11 @@ class Config(dict):
     def version_config(self, version):
         batch = 64
         val_batch = 16
-        hp = {1: {'n_epoch': 50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
-              2: {'n_epoch': 50, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
+        hp = {1: {'n_epoch': 201, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6},
+              2: {'n_epoch': 201, 'batch': batch, 'valid_batch': val_batch, 'n_layer':6}
              }
-        self['n_epoch'] = hp[version].get('n_epoch', 50)
-        self['pre_n_epoch'] = hp[version].get('n_epoch', 50)
+        self['n_epoch'] = hp[version].get('n_epoch', 201)
+        self['pre_n_epoch'] = hp[version].get('n_epoch', 201)
         self['n_layer'] = hp[version].get('n_layer', 6)
         self['batch'] = hp[version].get('batch', batch)
         self['valid_batch'] = hp[version].get('valid_batch', val_batch)
@@ -16,13 +16,13 @@ class Config(dict):
         #请自己造训练测试集
         self['pretrain_file'] = 'data/pretrain.csv'
         self['preval_file'] = 'data/preval.csv'
-        self['train_file'] = 'data/train_0.csv'
+        self['train_file'] = 'data/raw.csv'
         self['valid_file'] = 'data/val_0.csv'
         self['test_file'] = 'data/preliminary_a_test.csv'
     
         self['input_l'] = 150
         self['output_l'] = 80
-        self['n_token'] = 1562
+        self['n_token'] = 1560
         self['sos_id'] = 0
         self['pad_id'] = 1
         self['eos_id'] = 2

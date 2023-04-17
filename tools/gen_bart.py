@@ -5,7 +5,7 @@ from tokenizers import ByteLevelBPETokenizer
 from transformers import BartTokenizer, BartForConditionalGeneration, BertTokenizer
 
 path = './custom_pretrain'
-# os.mkdir(path)
+os.mkdir(path)
 samples = []
 with open("../data/raw.csv",'r') as fp:
     reader = csv.reader(fp)
@@ -26,7 +26,7 @@ with open("data.txt", 'w') as f:
 
 def build_vocab(vocab_file = './vocab.txt'):
     init_list = [x for x in range(1300)]
-    tokenizer = BartTokenizer.from_pretrained('fnlp/bart-base-chinese')
+    tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
     all_special_ids, all_special_tokens = zip(*sorted(zip(tokenizer.all_special_ids, tokenizer.all_special_tokens)))
     print(f'insert {all_special_ids} {all_special_tokens}')
     for i in range(len(all_special_ids)):
@@ -38,17 +38,14 @@ def build_vocab(vocab_file = './vocab.txt'):
             fp.write(f'{i}\n')
 
 tokenizer = ByteLevelBPETokenizer(lowercase=True, add_prefix_space=True)
-tokenizer.train(files='./data.txt', 
-                min_frequency=2, 
-                special_tokens=['<s>', '<pad>', '</s>', '<unk>', '<mask>', '10', '11'])
-tokenizer.add_special_tokens(['10','11'])
+tokenizer.train(files='./data.txt',  special_tokens=['<s>', '<pad>', '</s>', '<unk>', '<mask>'])
+# tokenizer.add_special_tokens(['10','11'])
 tokenizer.save_model(path)
 # build_vocab(vocab_file="./vocab.txt")
 tokenizer = BartTokenizer.from_pretrained(path)
 tokenizer.save_pretrained(path)
 
-# model = BartForConditionalGeneration.from_pretrained("../bart-base-chinese")
-model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
+model = BartForConditionalGeneration.from_pretrained("facebook/bart-base")
 # model.encoder.resize_embeddings(tokenizer.vocab_size)
 # model.decoder.resize_embeddings(tokenizer.vocab_size)
 model.resize_token_embeddings(tokenizer.vocab_size)

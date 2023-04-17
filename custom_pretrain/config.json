@@ -1,5 +1,5 @@
 {
-  "_name_or_path": "../bart-base-chinese",
+  "_name_or_path": "facebook/bart-base",
   "activation_dropout": 0.1,
   "activation_function": "gelu",
   "add_bias_logits": false,
@@ -8,7 +8,7 @@
     "BartForConditionalGeneration"
   ],
   "attention_dropout": 0.1,
-  "bos_token_id": 101,
+  "bos_token_id": 0,
   "classif_dropout": 0.1,
   "classifier_dropout": 0.0,
   "d_model": 768,
@@ -16,15 +16,16 @@
   "decoder_ffn_dim": 3072,
   "decoder_layerdrop": 0.0,
   "decoder_layers": 6,
-  "decoder_start_token_id": 102,
+  "decoder_start_token_id": 2,
   "dropout": 0.1,
   "early_stopping": true,
   "encoder_attention_heads": 12,
   "encoder_ffn_dim": 3072,
   "encoder_layerdrop": 0.0,
   "encoder_layers": 6,
-  "eos_token_id": 102,
-  "forced_eos_token_id": 102,
+  "eos_token_id": 2,
+  "forced_bos_token_id": 0,
+  "forced_eos_token_id": 2,
   "gradient_checkpointing": false,
   "id2label": {
     "0": "LABEL_0",
@@ -45,7 +46,7 @@
   "normalize_embedding": true,
   "num_beams": 4,
   "num_hidden_layers": 6,
-  "pad_token_id": 0,
+  "pad_token_id": 1,
   "scale_embedding": false,
   "task_specific_params": {
     "summarization": {
@@ -67,9 +68,8 @@
       "num_beams": 6
     }
   },
-  "tokenizer_class": "BertTokenizer",
   "torch_dtype": "float32",
   "transformers_version": "4.27.4",
   "use_cache": true,
-  "vocab_size": 1562
+  "vocab_size": 1560
 }

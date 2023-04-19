@@ -39,11 +39,15 @@ def build_vocab(vocab_file = './vocab.txt'):
 
 tokenizer = ByteLevelBPETokenizer(lowercase=True, add_prefix_space=True)
 tokenizer.train(files='./data.txt',  special_tokens=['<s>', '<pad>', '</s>', '<unk>', '<mask>'])
-# tokenizer.add_special_tokens(['10','11'])
 tokenizer.save_model(path)
+print(tokenizer.encode(" 10").ids)
+print(tokenizer.encode("10").ids)
+print(tokenizer.encode(" 11").ids)
+print(tokenizer.encode("11").ids)
+print(tokenizer.decode([0,278,2]))
 # build_vocab(vocab_file="./vocab.txt")
 tokenizer = BartTokenizer.from_pretrained(path)
-tokenizer.save_pretrained(path)
+print(tokenizer.vocab_size)
 
 model = BartForConditionalGeneration.from_pretrained("facebook/bart-base")
 # model.encoder.resize_embeddings(tokenizer.vocab_size)

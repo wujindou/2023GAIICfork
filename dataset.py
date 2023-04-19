@@ -4,7 +4,6 @@ import traceback
 import pandas as pd
 from torch.utils.data import Dataset
 from transformers import BartTokenizer
-import jieba_fast
 
 from utils import *
 
@@ -206,9 +205,7 @@ class DAEData(BaseDataset):
         self.vocab_id_to_token_dict = {v: k for k, v in self.tk.get_vocab().items()}
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
-        self.zh_tokenizer = jieba_fast.lcut
-        self.input_l = 150
-        self.output_l= 80
+        self.input_l = 260
         self.sos_id = 0
         self.pad_id = 1
         self.eos_id = 2
@@ -219,9 +216,8 @@ class DAEData(BaseDataset):
         self.permute_sentence_ratio = 1.0
         self.mask_ratio = 0.15
         self.random_ratio = 0.1
-        self.insert_ratio = 0.0
-        self.rotate_ratio = 0.0
-        self.mask_whole_word = 1
+        self.insert_ratio = 0.05
+        self.rotate_ratio = 0.05
         self.item_transform_func = None
 
         self.mask_span_distribution = None
@@ -230,52 +226,26 @@ class DAEData(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        # if random.random()>0.5:
-        text1 = self.samples.iloc[idx, 0]
-        text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
-        text1 = [self.sos_id] + text1 + [self.eos_id]
-        result = self.denoising_autoencoder(text1, self.input_l)
-        """
-        {
-            "source": source_,
-            "target": target_,
-            "prev_output_tokens": prev_output_tokens_,
-            "attn_mask": (source_ != self.pad_id).long(),
-            "loss_mask": (target_ != self.pad_id).long() if use_decoder else (target_ != source_).long(),
-            "use_decoder": torch.tensor(use_decoder).long()
-        }
-        """
-        print(result['source'], result['target'], result['loss_mask'])
-        return result['source'], result['target'], result['loss_mask']
-        # else:
-        #     text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
-        #     if pd.isna(text2):
-        #         text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #         text1, out1_ids = self.denoising_autoencoder(text1, self.input_l)
-        #         input_ids = [self.sos_id] + text1 + [self.eos_id]
-        #         labels = [-100] + out1_ids + [-100]
-        #         if len(input_ids) < self.input_l:
-        #             input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        #         if len(labels) < self.input_l:
-        #             labels.extend([-100] * (self.input_l - len(labels)))
-        #         assert len(input_ids)==len(labels)
-        #         return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        #     text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #     text2 = self.tk(text2, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #     if random.random()>0.5:
-        #         text1, text2 = text2, text1
-        #     text1, out1_ids = self.denoising_autoencoder(text1, self.input_l)
-        #     text2, out2_ids = self.denoising_autoencoder(text2, self.input_l)
-        #     input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
-        #     labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
-        #     if len(input_ids) < self.input_l:
-        #         input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        #     if len(labels) < self.input_l:
-        #         labels.extend([-100] * (self.input_l - len(labels)))
-        #     assert len(input_ids)==len(labels)
-        #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        if random.random()>0.5:
+            text1 = self.samples.iloc[idx, 0]
+            text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+            result = self.denoising_autoencoder(text1, self.input_l)
+            return result['source'], result['target'], result['loss_mask']
+        else:
+            text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
+            if pd.isna(text2):
+                text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+                result = self.denoising_autoencoder(text1, self.input_l)
+                return result['source'], result['target'], result['loss_mask']
+            text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+            text2 = self.tk(text2, max_length=80, truncation=True)['input_ids'][1:-1]
+            if random.random()>0.5:
+                text1, text2 = text2, text1
+            input_ids = text1 + text2
+            result = self.denoising_autoencoder(input_ids, self.input_l)
+            return result['source'], result['target'], result['loss_mask']
 
-    def denoising_autoencoder(self, tokens, max_seq_length):
+    def denoising_autoencoder(self, source, max_seq_length):
         """Biuld training sample.
 
         Arguments:
@@ -285,9 +255,15 @@ class DAEData(BaseDataset):
                 numpy and not python since python randint is inclusive for
                 the opper bound whereas the numpy one is exclusive.
         """
-        if len(tokens) > max_seq_length:
-            tokens = tokens[:max_seq_length]
-            tokens[-1] = self.eos_id
+        tokens = [self.sos_id]
+        for num in source:
+            tokens.append(num)
+            if num == 264:
+                tokens.append(self.eos_id)
+
+        # if len(tokens) > max_seq_length:
+        tokens = tokens[:max_seq_length]
+        tokens[-1] = self.eos_id
         tokens = torch.LongTensor(tokens)
         full_stops = (tokens == self.eos_id).long()
         assert (max_seq_length - tokens.shape[0]) >= 0, (tokens.size(), tokens[-1], max_seq_length)
@@ -296,21 +272,18 @@ class DAEData(BaseDataset):
         use_decoder = 1
         # if torch.rand(1).item() < 0.5:
         #     use_decoder = 0
-
         if self.permute_sentence_ratio > 0.0 and use_decoder == 1:
             source = self.permute_sentences(source, full_stops, self.permute_sentence_ratio)
 
         if self.mask_ratio > 0.0:
-            replace_length = 1 if use_decoder else -1
-            mask_ratio = self.mask_ratio * 2 if use_decoder else self.mask_ratio
-            source = self.add_whole_word_mask(source, mask_ratio, replace_length)
+            source = self.random_mask(source)
 
         if self.insert_ratio > 0.0:
-            raise NotImplementedError
+            # raise NotImplementedError
             source = self.add_insertion_noise(source, self.insert_ratio)
 
         if self.rotate_ratio > 0.0 and np.random.random() < self.rotate_ratio:
-            raise NotImplementedError
+        #     raise NotImplementedError
             source = self.add_rolling_noise(source)
 
         # there can additional changes to make:
@@ -403,192 +376,34 @@ class DAEData(BaseDataset):
             dim=0,
         )
         return tokens
+    
+    def random_mask(self,text_ids):
+        input_ids, output_ids = [], []
+        rands = np.random.random(len(text_ids))
+        idx=0
+        while idx<len(rands):
+            if rands[idx]<0.15:#需要mask
+                ngram=np.random.choice([1,2,3], p=[0.7,0.2,0.1])
+                if ngram==3 and len(rands)<7:
+                    ngram=2
+                if ngram==2 and len(rands)<4:
+                    ngram=1
+                L=idx+1
+                R=idx+ngram
+                while L<R and L<len(rands):
+                    rands[L]=np.random.random()*0.15
+                    L+=1
+                idx=R
+                if idx<len(rands):
+                    rands[idx]=1
+            idx+=1
 
-    def add_whole_word_mask(self, source, p, replace_length=1):
-        is_word_start, word_starts = self.word_starts(source)
-        num_to_mask_word = int(math.ceil(word_starts.size(0) * p))
-        num_to_mask_char = int(math.ceil(word_starts.size(0) * p * 0.1))
-        num_to_mask = num_to_mask_word + num_to_mask_char
-        if num_to_mask > word_starts.size(0):
-            word_starts = is_word_start.nonzero(as_tuple=False)
-        num_inserts = 0
-        if num_to_mask == 0:
-            return source
-
-        if self.mask_span_distribution is not None:
-            lengths = self.mask_span_distribution.sample(sample_shape=(num_to_mask,))
-
-            # Make sure we have enough to mask
-            cum_length = torch.cumsum(lengths, 0)
-            while cum_length[-1] < num_to_mask:
-                lengths = torch.cat(
-                    [
-                        lengths,
-                        self.mask_span_distribution.sample(sample_shape=(num_to_mask,)),
-                    ],
-                    dim=0,
-                )
-                cum_length = torch.cumsum(lengths, 0)
-
-            # Trim to masking budget
-            i = 0
-            while cum_length[i] < num_to_mask:
-                i += 1
-            lengths[i] = num_to_mask - (0 if i == 0 else cum_length[i - 1])
-            num_to_mask = i + 1
-            lengths = lengths[:num_to_mask]
-
-            # Handle 0-length mask (inserts) separately
-            lengths = lengths[lengths > 0]
-            num_inserts = num_to_mask - lengths.size(0)
-            num_to_mask -= num_inserts
-            if num_to_mask == 0:
-                return self.add_insertion_noise(source, num_inserts / source.size(0))
-
-            assert (lengths > 0).all()
-        else:
-            lengths = torch.ones((num_to_mask,)).long()
-        assert is_word_start[-1] == 0
-        indices = word_starts[
-            torch.randperm(word_starts.size(0))[:num_to_mask]
-        ].squeeze(1)
-        mask_random = torch.FloatTensor(num_to_mask).uniform_() < self.random_ratio
-        source_length = source.size(0)
-        assert source_length - 1 not in indices
-        to_keep = torch.ones(source_length, dtype=torch.bool)
-        is_word_start[
-            -1
-        ] = 255  # acts as a long length, so spans don't go over the end of doc
-        if replace_length == 0:
-            to_keep[indices] = 0
-        else:
-            # keep index, but replace it with [MASK]
-            # print(source.size(), word_starts.size(), indices.size(), mask_random.size())
-            source[indices] = self.mask_token_id
-            source[indices[mask_random]] = torch.randint(
-                1, self.vocab_size, size=(mask_random.sum(),)
-            )
-            # sorted_indices = torch.sort(indices)[0]
-            # continue_mask_pos = ((sorted_indices + 1)[:-1] == sorted_indices[1:])
-            # continue_mask_indices = sorted_indices[1:][continue_mask_pos]
-            # to_keep[continue_mask_indices] = 0
-
-        # for char indices, we already masked, the following loop handles word mask
-        indices = indices[:num_to_mask_word]
-        mask_random = mask_random[:num_to_mask_word]
-        if self.mask_span_distribution is not None:
-            assert len(lengths.size()) == 1
-            assert lengths.size() == indices.size()
-            lengths -= 1
-            while indices.size(0) > 0:
-                assert lengths.size() == indices.size()
-                lengths -= is_word_start[indices + 1].long()
-                uncompleted = lengths >= 0
-                indices = indices[uncompleted] + 1
-                mask_random = mask_random[uncompleted]
-                lengths = lengths[uncompleted]
-                if replace_length != -1:
-                    # delete token
-                    to_keep[indices] = 0
-                else:
-                    # keep index, but replace it with [MASK]
-                    source[indices] = self.mask_token_id
-                    source[indices[mask_random]] = torch.randint(
-                        1, self.vocab_size, size=(mask_random.sum(),)
-                    )
-        else:
-            # A bit faster when all lengths are 1
-            while indices.size(0) > 0:
-                uncompleted = is_word_start[indices + 1] == 0
-                indices = indices[uncompleted] + 1
-                mask_random = mask_random[uncompleted]
-                if replace_length != -1:
-                    # delete token
-                    to_keep[indices] = 0
-                else:
-                    # keep index, but replace it with [MASK]
-                    source[indices] = self.mask_token_id
-                    source[indices[mask_random]] = torch.randint(
-                        1, self.vocab_size, size=(mask_random.sum(),)
-                    )
-
-                assert source_length - 1 not in indices
-
-        source = source[to_keep]
-
-        if num_inserts > 0:
-            source = self.add_insertion_noise(source, num_inserts / source.size(0))
-
-        return source
-
-    def word_starts(self, source):
-        if self.mask_whole_word is None:
-            is_word_start = torch.ones(source.size())
-            is_word_start[0] = 0
-            is_word_start[-1] = 0
-            return is_word_start
-        raw_tokens = [self.vocab_id_to_token_dict[i] for i in source.tolist()]
-        words = [raw_tokens[0]] + self.zh_tokenizer(''.join(raw_tokens[1:-1]), HMM=True) + [raw_tokens[-1]]
-
-        def _is_chinese_char(c):
-            """Checks whether CP is the codepoint of a CJK character."""
-            # This defines a "chinese character" as anything in the CJK Unicode block:
-            #   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
-            #
-            # Note that the CJK Unicode block is NOT all Japanese and Korean characters,
-            # despite its name. The modern Korean Hangul alphabet is a different block,
-            # as is Japanese Hiragana and Katakana. Those alphabets are used to write
-            # space-separated words, so they are not treated specially and handled
-            # like the all of the other languages.
-            if len(c) > 1:
-                return all([_is_chinese_char(c_i) for c_i in c])
-            cp = ord(c)
-            if ((cp >= 0x4E00 and cp <= 0x9FFF) or  #
-                (cp >= 0x3400 and cp <= 0x4DBF) or  #
-                (cp >= 0x20000 and cp <= 0x2A6DF) or  #
-                (cp >= 0x2A700 and cp <= 0x2B73F) or  #
-                (cp >= 0x2B740 and cp <= 0x2B81F) or  #
-                (cp >= 0x2B820 and cp <= 0x2CEAF) or
-                (cp >= 0xF900 and cp <= 0xFAFF) or  #
-                    (cp >= 0x2F800 and cp <= 0x2FA1F)):  #
-                return True
-
-            return False
-
-        def align_linear(atokens, btokens):
-            a2c = []
-            c2b = []
-            a2b = []
-            length = 0
-            for tok in atokens:
-                a2c.append([length + i for i in range(len(tok))])
-                length += len(tok)
-            for i, tok in enumerate(btokens):
-                c2b.extend([i for _ in range(len(tok))])
-
-            for i, amap in enumerate(a2c):
-                bmap = [c2b[ci] for ci in amap]
-                a2b.append(list(set(bmap)))
-            return a2b
-        
-        raw_to_word_align = align_linear(raw_tokens, words)
-        is_word_start = torch.zeros(source.size())
-        word_starts = []
-        skip_cur_word = True
-        for i in range(1, len(raw_to_word_align)):
-            if raw_to_word_align[i-1] == raw_to_word_align[i]:
-                # not a word start, as they align to the same word
-                if not skip_cur_word and not _is_chinese_char(raw_tokens[i]):
-                    word_starts.pop(-1)
-                    skip_cur_word = True
-                continue
+        for r, i in zip(rands, text_ids):
+            if r < 0.15 * 0.8 and i not in [0,1,2,3,4]:
+                input_ids.append(self.mask_token_id)
+            # elif r < 0.15:
+            #     input_ids.append(np.random.randint(self.spNum,self.vocab_size))
             else:
-                is_word_start[i] = 1
-                if _is_chinese_char(raw_tokens[i]):
-                    word_starts.append(i)
-                    skip_cur_word = False
-        is_word_start[0] = 0
-        is_word_start[-1] = 0
-        word_starts = torch.tensor(word_starts).long().view(-1, 1)
-        return is_word_start, word_starts
+                input_ids.append(i)
 
+        return torch.LongTensor(input_ids)

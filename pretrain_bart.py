@@ -1,4 +1,4 @@
-WANDB = False
+WANDB = True
 import wandb
 import numpy as np 
 import torch
@@ -23,7 +23,7 @@ def train():
     if WANDB:
         wandb.init(
                 project="2023GAIIC",
-                name="pre_bart_large",
+                name="pre_bart_dae",
         )
 
     train_data = DAEData(conf['pretrain_file'])
@@ -35,8 +35,8 @@ def train():
     step = Step()
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
-    model.to('cuda')
-    accumulation_steps = 4.
+    # model.to('cuda')
+    accumulation_steps = 8.
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     scaler = GradScaler()

@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from utils import to_device, Checkpoint, Step, Logger
 from models_bart import PretrainBartModel
-from dataset import NgramData
+from dataset import DAEData
 from config_bart import Config
 from losses import DAE_loss
 
@@ -26,8 +26,8 @@ def train():
                 name="pre_bart_large",
         )
 
-    train_data = NgramData(conf['pretrain_file'])
-    val_data = NgramData(conf['preval_file'])
+    train_data = DAEData(conf['pretrain_file'])
+    val_data = DAEData(conf['preval_file'])
     train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
     val_loader = DataLoader(val_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
 

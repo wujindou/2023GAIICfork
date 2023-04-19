@@ -26,7 +26,7 @@ with open("data.txt", 'w') as f:
 
 def build_vocab(vocab_file = './vocab.txt'):
     init_list = [x for x in range(1300)]
-    tokenizer = BertTokenizer.from_pretrained('facebook/bart-base')
+    tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
     all_special_ids, all_special_tokens = zip(*sorted(zip(tokenizer.all_special_ids, tokenizer.all_special_tokens)))
     print(f'insert {all_special_ids} {all_special_tokens}')
     for i in range(len(all_special_ids)):
@@ -42,7 +42,7 @@ tokenizer.train(files='./data.txt',  special_tokens=['<s>', '<pad>', '</s>', '<u
 # tokenizer.add_special_tokens(['10','11'])
 tokenizer.save_model(path)
 # build_vocab(vocab_file="./vocab.txt")
-tokenizer = BertTokenizer.from_pretrained(path)
+tokenizer = BartTokenizer.from_pretrained(path)
 tokenizer.save_pretrained(path)
 
 model = BartForConditionalGeneration.from_pretrained("facebook/bart-base")

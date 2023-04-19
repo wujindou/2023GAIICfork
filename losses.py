@@ -1,7 +1,5 @@
-
 import torch
 import torch.nn as nn
-from megatron.utils import average_losses_across_data_parallel_group
 import torch.nn.functional as F
 def CE(output, target):
     '''
@@ -17,13 +15,7 @@ def DAE_loss(loss_mask, lm_loss_):
     loss_mask = loss_mask.float()
     lm_loss = torch.sum(
         lm_loss_.view(-1) * loss_mask.reshape(-1)) / loss_mask.sum()
-
-    loss = lm_loss
-    averaged_losses = average_losses_across_data_parallel_group(
-        [lm_loss])
-    return averaged_losses[0]
-
-    # if sop_logits is not None:
+    return lm_loss
     #     sop_loss = F.cross_entropy(sop_logits.view(-1, 2).float(),
     #                                sentence_order.view(-1),
     #                                ignore_index=-1)

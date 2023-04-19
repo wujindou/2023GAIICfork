@@ -4,6 +4,7 @@ import traceback
 import pandas as pd
 from torch.utils.data import Dataset
 from transformers import BartTokenizer
+import jieba_fast
 
 from utils import *
 
@@ -202,15 +203,17 @@ class DAEData(BaseDataset):
         self.samples = pd.read_csv(path,header=None)
         self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
         self.vocab_size = self.tk.vocab_size
+        self.vocab_id_to_token_dict = {v: k for k, v in self.tk.get_vocab().items()}
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
+        self.zh_tokenizer = jieba_fast.lcut
         self.input_l = 150
         self.output_l= 80
         self.sos_id = 0
         self.pad_id = 1
         self.eos_id = 2
         self.mask_token_id = 4
-        self.seg_token_ids=[0,1,2,3,4,5,6,7,8,9,10,11]
+        self.seg_token_ids=[0,1,2,3,4]
 
         # Denoising ratios
         self.permute_sentence_ratio = 1.0
@@ -223,8 +226,6 @@ class DAEData(BaseDataset):
 
         self.mask_span_distribution = None
 
-
-
     def __len__(self):
         return len(self.samples)
 
@@ -232,6 +233,7 @@ class DAEData(BaseDataset):
         # if random.random()>0.5:
         text1 = self.samples.iloc[idx, 0]
         text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+        text1 = [self.sos_id] + text1 + [self.eos_id]
         result = self.denoising_autoencoder(text1, self.input_l)
         """
         {
@@ -243,6 +245,7 @@ class DAEData(BaseDataset):
             "use_decoder": torch.tensor(use_decoder).long()
         }
         """
+        print(result['source'], result['target'], result['loss_mask'])
         return result['source'], result['target'], result['loss_mask']
         # else:
         #     text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
@@ -272,7 +275,7 @@ class DAEData(BaseDataset):
         #     assert len(input_ids)==len(labels)
         #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
-    def denoising_autoencoder(self, sample, max_seq_length):
+    def denoising_autoencoder(self, tokens, max_seq_length):
         """Biuld training sample.
 
         Arguments:
@@ -282,16 +285,6 @@ class DAEData(BaseDataset):
                 numpy and not python since python randint is inclusive for
                 the opper bound whereas the numpy one is exclusive.
         """
-        # permute sentences
-        tokens = [self.sos_id]
-        for sent in sample:
-            for t in sent:
-                tokens.append(t)
-                if t in self.seg_token_ids:
-                    tokens.append(self.eos_id)
-            if tokens[-1] != self.eos_id:
-                tokens.append(self.eos_id)
-
         if len(tokens) > max_seq_length:
             tokens = tokens[:max_seq_length]
             tokens[-1] = self.eos_id
@@ -527,3 +520,75 @@ class DAEData(BaseDataset):
             source = self.add_insertion_noise(source, num_inserts / source.size(0))
 
         return source
+
+    def word_starts(self, source):
+        if self.mask_whole_word is None:
+            is_word_start = torch.ones(source.size())
+            is_word_start[0] = 0
+            is_word_start[-1] = 0
+            return is_word_start
+        raw_tokens = [self.vocab_id_to_token_dict[i] for i in source.tolist()]
+        words = [raw_tokens[0]] + self.zh_tokenizer(''.join(raw_tokens[1:-1]), HMM=True) + [raw_tokens[-1]]
+
+        def _is_chinese_char(c):
+            """Checks whether CP is the codepoint of a CJK character."""
+            # This defines a "chinese character" as anything in the CJK Unicode block:
+            #   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+            #
+            # Note that the CJK Unicode block is NOT all Japanese and Korean characters,
+            # despite its name. The modern Korean Hangul alphabet is a different block,
+            # as is Japanese Hiragana and Katakana. Those alphabets are used to write
+            # space-separated words, so they are not treated specially and handled
+            # like the all of the other languages.
+            if len(c) > 1:
+                return all([_is_chinese_char(c_i) for c_i in c])
+            cp = ord(c)
+            if ((cp >= 0x4E00 and cp <= 0x9FFF) or  #
+                (cp >= 0x3400 and cp <= 0x4DBF) or  #
+                (cp >= 0x20000 and cp <= 0x2A6DF) or  #
+                (cp >= 0x2A700 and cp <= 0x2B73F) or  #
+                (cp >= 0x2B740 and cp <= 0x2B81F) or  #
+                (cp >= 0x2B820 and cp <= 0x2CEAF) or
+                (cp >= 0xF900 and cp <= 0xFAFF) or  #
+                    (cp >= 0x2F800 and cp <= 0x2FA1F)):  #
+                return True
+
+            return False
+
+        def align_linear(atokens, btokens):
+            a2c = []
+            c2b = []
+            a2b = []
+            length = 0
+            for tok in atokens:
+                a2c.append([length + i for i in range(len(tok))])
+                length += len(tok)
+            for i, tok in enumerate(btokens):
+                c2b.extend([i for _ in range(len(tok))])
+
+            for i, amap in enumerate(a2c):
+                bmap = [c2b[ci] for ci in amap]
+                a2b.append(list(set(bmap)))
+            return a2b
+        
+        raw_to_word_align = align_linear(raw_tokens, words)
+        is_word_start = torch.zeros(source.size())
+        word_starts = []
+        skip_cur_word = True
+        for i in range(1, len(raw_to_word_align)):
+            if raw_to_word_align[i-1] == raw_to_word_align[i]:
+                # not a word start, as they align to the same word
+                if not skip_cur_word and not _is_chinese_char(raw_tokens[i]):
+                    word_starts.pop(-1)
+                    skip_cur_word = True
+                continue
+            else:
+                is_word_start[i] = 1
+                if _is_chinese_char(raw_tokens[i]):
+                    word_starts.append(i)
+                    skip_cur_word = False
+        is_word_start[0] = 0
+        is_word_start[-1] = 0
+        word_starts = torch.tensor(word_starts).long().view(-1, 1)
+        return is_word_start, word_starts
+

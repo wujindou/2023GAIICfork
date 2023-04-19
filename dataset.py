@@ -107,7 +107,7 @@ class NgramData(BaseDataset):
         self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
         self.spNum=len(self.tk.all_special_tokens)
         self.tkNum=self.tk.vocab_size
-        self.input_l = 230
+        self.input_l = 150
         self.output_l= 80
         self.sos_id = 0
         self.pad_id = 1

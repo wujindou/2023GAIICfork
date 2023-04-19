@@ -12,12 +12,12 @@ def hist(csv_file):
         samples = [row for row in reader]
         for sample in samples:
             if(i<20000):
-                source = [int(x) for x in sample[1].split()]
-                target = [int(x) for x in sample[2].split()]
+                source = [int(x) for x in sample[0].split()]
+                target = [int(x) for x in sample[1].split()]
                 source_len.append(len(source))
                 target_len.append(len(target))
             else:
-                source = [int(x) for x in sample[1].split()]
+                source = [int(x) for x in sample[0].split()]
                 source_len.append(len(source))
             i+=1
     print("The maximum input length is: ",np.array(source_len).max())
@@ -47,5 +47,5 @@ def count_numbers(csv_file):
         print(f"{number}: {frequency}")
     print(f"There are {len(set(numbers))} kinds of numbers")
 
-count_numbers("./data/raw.csv")
-hist("./data/raw.csv")
+count_numbers("./data/pretrain.csv")
+hist("./data/pretrain.csv")

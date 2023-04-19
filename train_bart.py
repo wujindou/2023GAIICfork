@@ -90,8 +90,8 @@ def train():
 
     awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
-    checkpoint.resume(file_path="./checkpoint/1/model_6.pt")
-    start_epoch = 7
+    checkpoint.resume(file_path="./pretrain/2/model_360.pt")
+    start_epoch = 0
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
     logger.log(conf)
@@ -183,4 +183,4 @@ version = 1
 conf = Config(version)
 
 # train()
-inference('checkpoint/%d/model_8.pt'%version, conf['test_file'])
+inference('checkpoint/%d/model_5.pt'%version, conf['test_file'])

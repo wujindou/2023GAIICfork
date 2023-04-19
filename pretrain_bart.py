@@ -40,10 +40,8 @@ def train():
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     scaler = GradScaler()
 
-    best_loss = 100.
-
-    checkpoint.resume(file_path="./pretrain/2/model_170.pt")
-    start_epoch = 171
+    checkpoint.resume(file_path="./pretrain/2/model_300.pt")
+    start_epoch = 301
     best_loss = 100.
 
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')

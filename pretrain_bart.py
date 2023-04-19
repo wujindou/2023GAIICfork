@@ -14,6 +14,7 @@ from utils import to_device, Checkpoint, Step, Logger
 from models_bart import PretrainBartModel
 from dataset import NgramData
 from config_bart import Config
+from losses import DAE_loss
 
 def get_model():
     return PretrainBartModel(n_token=conf['n_token'])
@@ -40,8 +41,8 @@ def train():
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     scaler = GradScaler()
 
-    checkpoint.resume(file_path="./pretrain/2/model_300.pt")
-    start_epoch = 301
+    # checkpoint.resume(file_path="./pretrain/2/model_300.pt")
+    start_epoch = 0
     best_loss = 100.
 
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
@@ -52,13 +53,15 @@ def train():
     for epoch in range(start_epoch, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
-        for i, (source, targets) in enumerate(tqdm(train_loader)):
+        for i, (source, targets, loss_mask) in enumerate(tqdm(train_loader)):
             source = to_device(source, 'cuda')
             targets = to_device(targets, 'cuda')
+            loss_mask = to_device(loss_mask, 'cuda')
             step.forward(source.shape[0])
             with autocast():
-                loss = model(source, targets).loss
-                loss = loss.mean() / accumulation_steps
+                lm_loss = model(source, targets).loss
+                # loss = loss.mean() / accumulation_steps
+                loss = DAE_loss(loss_mask, lm_loss) / accumulation_steps
             # loss.backward()
             scaler.scale(loss).backward()
             if ((i+1) % accumulation_steps)==0:
@@ -80,11 +83,12 @@ def train():
             checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
             # model.eval()
             # val_losses = []
-            # for (val_source, val_targets) in tqdm(val_loader):
+            # for (val_source, loss_mask, val_targets) in tqdm(val_loader):
             #     val_source = to_device(val_source, 'cuda')
             #     val_targets = to_device(val_targets, 'cuda')
-            #     val_loss = model(val_source, val_targets).loss
-            #     val_loss = val_loss.mean()
+            #     loss_mask = to_device(loss_mask, 'cuda')
+            #     val_lm_loss = model(val_source, val_targets).loss
+            #     val_loss = DAE_loss(loss_mask, val_lm_loss)
             #     val_losses.append(val_loss.item())
             # val_losses = np.array(val_losses).mean()
             # logger.log(val_losses)

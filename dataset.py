@@ -107,7 +107,7 @@ class NgramData(BaseDataset):
         self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
-        self.input_l = 150
+        self.input_l = 230
         self.output_l= 80
         self.sos_id = 0
         self.pad_id = 1
@@ -119,51 +119,51 @@ class NgramData(BaseDataset):
 
     def _try_getitem(self, idx):
         # if random.random()>0.5:
-        text1 = self.samples.iloc[idx, 0]
-        text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
-        text1, out1_ids = self.random_mask(text1)
-        input_ids = [self.sos_id] + text1 + [self.eos_id]
-        labels = [-100] + out1_ids + [-100]
-        if len(input_ids) < self.input_l:
-            input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        if len(labels) < self.input_l:
-            labels.extend([-100] * (self.input_l - len(labels)))
-        assert len(input_ids)==len(labels)
-        return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        # else:
-        #     text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
-        #     if pd.isna(text2):
-        #         text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #         text1, out1_ids = self.random_mask(text1)
-        #         input_ids = [self.sos_id] + text1 + [self.eos_id]
-        #         labels = [-100] + out1_ids + [-100]
-        #         if len(input_ids) < self.input_l:
-        #             input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        #         if len(labels) < self.input_l:
-        #             labels.extend([-100] * (self.input_l - len(labels)))
-        #         assert len(input_ids)==len(labels)
-        #         return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        #     text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #     text2 = self.tk(text2, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        #     if random.random()>0.5:
-        #         text1, text2 = text2, text1 
+        #     text1 = self.samples.iloc[idx, 1]
+        #     text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
         #     text1, out1_ids = self.random_mask(text1)
-        #     text2, out2_ids = self.random_mask(text2)
-        #     input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
-        #     labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        #     input_ids = [self.sos_id] + text1 + [self.eos_id]
+        #     labels = [-100] + out1_ids + [-100]
         #     if len(input_ids) < self.input_l:
         #         input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
         #     if len(labels) < self.input_l:
         #         labels.extend([-100] * (self.input_l - len(labels)))
         #     assert len(input_ids)==len(labels)
         #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        # else:
+        text1, text2 = self.samples.iloc[idx, 1], self.samples.iloc[idx, 2]
+        if pd.isna(text2):
+            text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
+            text1, out1_ids = self.random_mask(text1)
+            input_ids = [self.sos_id] + text1 + [self.eos_id]
+            labels = [-100] + out1_ids + [-100]
+            if len(input_ids) < self.input_l:
+                input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
+            if len(labels) < self.input_l:
+                labels.extend([-100] * (self.input_l - len(labels)))
+            assert len(input_ids)==len(labels)
+            return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
+        text2 = self.tk(text2, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
+        if random.random()>0.5:
+            text1, text2 = text2, text1 
+        text1, out1_ids = self.random_mask(text1)
+        text2, out2_ids = self.random_mask(text2)
+        input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
+        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        if len(input_ids) < self.input_l:
+            input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
+        if len(labels) < self.input_l:
+            labels.extend([-100] * (self.input_l - len(labels)))
+        assert len(input_ids)==len(labels)
+        return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []
         rands = np.random.random(len(text_ids))
         idx=0
         while idx<len(rands):
-            if rands[idx]<0.15:#需要mask
+            if rands[idx]<0.1:#需要mask
                 ngram=np.random.choice([1,2,3], p=[0.7,0.2,0.1])#若要mask，进行x_gram mask的概率
                 if ngram==3 and len(rands)<7:#太大的gram不要应用于过短文本
                     ngram=2
@@ -180,13 +180,13 @@ class NgramData(BaseDataset):
             idx+=1
 
         for r, i in zip(rands, text_ids):
-            if r < 0.15 * 0.8:
+            if r < 0.1 * 0.8:
                 input_ids.append(self.mask_token_id)
                 output_ids.append(i)#mask预测自己
-            elif r < 0.15 * 0.9:
+            elif r < 0.1 * 0.9:
                 input_ids.append(i)
                 output_ids.append(i)#自己预测自己
-            elif r < 0.15:
+            elif r < 0.1:
                 input_ids.append(np.random.randint(self.spNum,self.vocab_size))
                 output_ids.append(i)#随机的一个词预测自己，随机词不会从特殊符号中选取，有小概率抽到自己
             else:
@@ -205,7 +205,7 @@ class DAEData(BaseDataset):
         self.vocab_id_to_token_dict = {v: k for k, v in self.tk.get_vocab().items()}
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
-        self.input_l = 260
+        self.input_l = 230
         self.sos_id = 0
         self.pad_id = 1
         self.eos_id = 2
@@ -213,11 +213,11 @@ class DAEData(BaseDataset):
         self.seg_token_ids=[0,1,2,3,4]
 
         # Denoising ratios
-        self.permute_sentence_ratio = 1.0
+        self.permute_sentence_ratio = 0.
         self.mask_ratio = 0.15
-        self.random_ratio = 0.1
-        self.insert_ratio = 0.05
-        self.rotate_ratio = 0.05
+        self.random_ratio = 0.
+        self.insert_ratio = 0.
+        self.rotate_ratio = 0.
         self.item_transform_func = None
 
         self.mask_span_distribution = None
@@ -226,24 +226,25 @@ class DAEData(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        if random.random()>0.5:
-            text1 = self.samples.iloc[idx, 0]
+        # if random.random()>0.5:
+        #     text1 = self.samples.iloc[idx, 0]
+        #     text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+        #     result = self.denoising_autoencoder(text1, self.input_l)
+        #     return result['source'], result['target'], result['loss_mask']
+        # else:
+        text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
+        if pd.isna(text2):
             text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
             result = self.denoising_autoencoder(text1, self.input_l)
             return result['source'], result['target'], result['loss_mask']
-        else:
-            text1, text2 = self.samples.iloc[idx, 0], self.samples.iloc[idx, 1]
-            if pd.isna(text2):
-                text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
-                result = self.denoising_autoencoder(text1, self.input_l)
-                return result['source'], result['target'], result['loss_mask']
-            text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
-            text2 = self.tk(text2, max_length=80, truncation=True)['input_ids'][1:-1]
-            if random.random()>0.5:
-                text1, text2 = text2, text1
-            input_ids = text1 + text2
-            result = self.denoising_autoencoder(input_ids, self.input_l)
-            return result['source'], result['target'], result['loss_mask']
+        text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
+        text2 = self.tk(text2, max_length=80, truncation=True)['input_ids'][1:-1]
+        if random.random()>0.5:
+            text1, text2 = text2, text1
+        input_ids = text1 + text2
+        result = self.denoising_autoencoder(input_ids, self.input_l)
+        # print(result['source'], result['target'])
+        return result['source'], result['target'], result['loss_mask']
 
     def denoising_autoencoder(self, source, max_seq_length):
         """Biuld training sample.
@@ -255,15 +256,16 @@ class DAEData(BaseDataset):
                 numpy and not python since python randint is inclusive for
                 the opper bound whereas the numpy one is exclusive.
         """
-        tokens = [self.sos_id]
-        for num in source:
-            tokens.append(num)
-            if num == 264:
-                tokens.append(self.eos_id)
+        tokens = [self.sos_id] + source + [self.eos_id]
+        # tokens = [self.sos_id]
+        # for num in source:
+        #     tokens.append(num)
+        #     if num == 264:
+        #         tokens.append(self.eos_id)
 
         # if len(tokens) > max_seq_length:
         tokens = tokens[:max_seq_length]
-        tokens[-1] = self.eos_id
+        # tokens[-1] = self.eos_id
         tokens = torch.LongTensor(tokens)
         full_stops = (tokens == self.eos_id).long()
         assert (max_seq_length - tokens.shape[0]) >= 0, (tokens.size(), tokens[-1], max_seq_length)
@@ -276,7 +278,7 @@ class DAEData(BaseDataset):
             source = self.permute_sentences(source, full_stops, self.permute_sentence_ratio)
 
         if self.mask_ratio > 0.0:
-            source = self.random_mask(source)
+            source = self.text_infilling(source)
 
         if self.insert_ratio > 0.0:
             # raise NotImplementedError
@@ -377,7 +379,7 @@ class DAEData(BaseDataset):
         )
         return tokens
     
-    def random_mask(self,text_ids):
+    def text_infilling(self,text_ids):
         input_ids, output_ids = [], []
         rands = np.random.random(len(text_ids))
         idx=0
@@ -400,10 +402,11 @@ class DAEData(BaseDataset):
 
         for r, i in zip(rands, text_ids):
             if r < 0.15 * 0.8 and i not in [0,1,2,3,4]:
+                if input_ids[-1] == 4:
+                    continue
                 input_ids.append(self.mask_token_id)
             # elif r < 0.15:
             #     input_ids.append(np.random.randint(self.spNum,self.vocab_size))
             else:
                 input_ids.append(i)
-
         return torch.LongTensor(input_ids)

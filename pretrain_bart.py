@@ -1,4 +1,4 @@
-WANDB = True
+WANDB = False
 import wandb
 import numpy as np 
 import torch
@@ -12,9 +12,8 @@ from tqdm import tqdm
 
 from utils import to_device, Checkpoint, Step, Logger
 from models_bart import PretrainBartModel
-from dataset import DAEData
+from dataset import NgramData
 from config_bart import Config
-from losses import DAE_loss
 
 def get_model():
     return PretrainBartModel(n_token=conf['n_token'])
@@ -23,11 +22,11 @@ def train():
     if WANDB:
         wandb.init(
                 project="2023GAIIC",
-                name="pre_bart_dae",
+                name="pre_bart_ngram",
         )
 
-    train_data = DAEData(conf['pretrain_file'])
-    val_data = DAEData(conf['preval_file'])
+    train_data = NgramData(conf['pretrain_file'])
+    val_data = NgramData(conf['preval_file'])
     train_loader = DataLoader(train_data, batch_size=conf['batch'], shuffle=True, num_workers=12, drop_last=False)
     val_loader = DataLoader(val_data, batch_size=conf['valid_batch'], shuffle=True, num_workers=12, drop_last=False)
 
@@ -36,13 +35,13 @@ def train():
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
     # model.to('cuda')
-    accumulation_steps = 8.
+    accumulation_steps = 4.
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     scaler = GradScaler()
 
-    # checkpoint.resume(file_path="./pretrain/2/model_300.pt")
-    start_epoch = 0
+    checkpoint.resume(file_path="./pretrain/1/model_30.pt")
+    start_epoch = 31
     best_loss = 100.
 
     logger = Logger(conf['pre_model_dir']+'/log%d.txt'%version, 'a')
@@ -53,15 +52,13 @@ def train():
     for epoch in range(start_epoch, conf['pre_n_epoch']):
         print('epoch', epoch)
         logger.log('new epoch', epoch)
-        for i, (source, targets, loss_mask) in enumerate(tqdm(train_loader)):
+        for i, (source, targets) in enumerate(tqdm(train_loader)):
             source = to_device(source, 'cuda')
             targets = to_device(targets, 'cuda')
-            loss_mask = to_device(loss_mask, 'cuda')
             step.forward(source.shape[0])
             with autocast():
-                lm_loss = model(source, targets).loss
-                # loss = loss.mean() / accumulation_steps
-                loss = DAE_loss(loss_mask, lm_loss) / accumulation_steps
+                loss = model(source, targets).loss
+                loss = loss.mean() / accumulation_steps
             # loss.backward()
             scaler.scale(loss).backward()
             if ((i+1) % accumulation_steps)==0:
@@ -106,7 +103,7 @@ def train():
     logger.close()
     writer.close()
 
-version = 2
+version = 1
 conf = Config(version)
 
 train()

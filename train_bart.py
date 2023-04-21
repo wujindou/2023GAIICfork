@@ -90,7 +90,7 @@ def train():
 
     awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
 
-    checkpoint.resume(file_path="./pretrain/2/model_360.pt")
+    checkpoint.resume(file_path="./pretrain/2/model_2.pt")
     start_epoch = 0
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
@@ -117,11 +117,12 @@ def train():
                 loss.backward()
                 awp._restore()
 
-            fgm.attack()
-            adv_loss = model(source, mask, targets).loss
-            adv_loss = adv_loss.mean()
-            adv_loss.backward()
-            fgm.restore()
+            if 1 <= epoch:
+                fgm.attack()
+                adv_loss = model(source, mask, targets).loss
+                adv_loss = adv_loss.mean()
+                adv_loss.backward()
+                fgm.restore()
 
             optimizer.step()
             # scheduler.step()
@@ -137,14 +138,14 @@ def train():
         # if epoch > 100:
         if epoch%1==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
-            # model.eval()
-            # metrics = evaluate(model, valid_loader)
-            # logger.log('valid', step.value, metrics.value())
-            # if WANDB:
-            #     wandb.log({'valid_metric': metrics.value()})
-            # writer.add_scalars('valid metric', metrics.value(), step.value)
-            # checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
-            # model.train()
+            model.eval()
+            metrics = evaluate(model, valid_loader)
+            logger.log('valid', step.value, metrics.value())
+            if WANDB:
+                wandb.log({'valid_metric': metrics.value()})
+            writer.add_scalars('valid metric', metrics.value(), step.value)
+            checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
+            model.train()
 
         if WANDB:
             wandb.log({'epoch': epoch})
@@ -182,5 +183,5 @@ def inference(model_file, data_file):
 version = 1
 conf = Config(version)
 
-# train()
-inference('checkpoint/%d/model_5.pt'%version, conf['test_file'])
+train()
+# inference('checkpoint/%d/model_5.pt'%version, conf['test_file'])

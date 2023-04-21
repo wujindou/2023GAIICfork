@@ -60,8 +60,8 @@ class BartDataset(BaseDataset):
             reader = csv.reader(fp)
             self.samples = [row for row in reader]
             self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain')
-            self.input_l = 150
-            self.output_l = 80
+            self.input_l = 156
+            self.output_l = 86
             self.sos_id = 0
             self.pad_id = 1
             self.eos_id = 2
@@ -76,7 +76,7 @@ class BartDataset(BaseDataset):
             target = self.samples[idx][2]
         except:
             return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask'])
-        target_ids = self.tokenizer(target, max_length=80, padding='max_length', truncation=True)
+        target_ids = self.tokenizer(target, max_length=86, padding='max_length', truncation=True)
         # print(source_ids['input_ids'],source_ids['attention_mask'],target_ids['input_ids'])
         return torch.LongTensor(source_ids['input_ids']), torch.LongTensor(source_ids['attention_mask']), torch.LongTensor(target_ids['input_ids'])
         # source = [self.sos_id] + [int(x) for x in self.samples[idx][1].split()] + [self.eos_id]
@@ -118,52 +118,35 @@ class NgramData(BaseDataset):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        # if random.random()>0.5:
-        #     text1 = self.samples.iloc[idx, 1]
-        #     text1 = self.tk(text1, max_length=150, truncation=True)['input_ids'][1:-1]
-        #     text1, out1_ids = self.random_mask(text1)
-        #     input_ids = [self.sos_id] + text1 + [self.eos_id]
-        #     labels = [-100] + out1_ids + [-100]
-        #     if len(input_ids) < self.input_l:
-        #         input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        #     if len(labels) < self.input_l:
-        #         labels.extend([-100] * (self.input_l - len(labels)))
-        #     assert len(input_ids)==len(labels)
-        #     return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        # else:
-        text1, text2 = self.samples.iloc[idx, 1], self.samples.iloc[idx, 2]
-        if pd.isna(text2):
-            text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-            text1, out1_ids = self.random_mask(text1)
-            input_ids = [self.sos_id] + text1 + [self.eos_id]
-            labels = [-100] + out1_ids + [-100]
-            if len(input_ids) < self.input_l:
-                input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-            if len(labels) < self.input_l:
-                labels.extend([-100] * (self.input_l - len(labels)))
-            assert len(input_ids)==len(labels)
-            return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        text1 = self.tk(text1, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        text2 = self.tk(text2, max_length=self.input_l, truncation=True)['input_ids'][1:-1]
-        if random.random()>0.5:
-            text1, text2 = text2, text1 
-        text1, out1_ids = self.random_mask(text1)
-        text2, out2_ids = self.random_mask(text2)
-        input_ids = [self.sos_id] + text1 + [self.eos_id] + text2 + [self.eos_id]
-        labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
-        if len(input_ids) < self.input_l:
-            input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        if len(labels) < self.input_l:
-            labels.extend([-100] * (self.input_l - len(labels)))
+        text1 = self.samples.iloc[idx, 1]
+        # text2 = self.samples.iloc[idx, 1]
+        # if pd.isna(text2):
+        text1_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids[1:-1]
+        text1_ids, out1_ids = self.random_mask(text1_ids)
+        input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id]
+        labels = [-100] + out1_ids + [-100]
+        # if len(input_ids) < self.input_l:
+        #     input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
+        # if len(labels) < self.input_l:
+        #     labels.extend([-100] * (self.input_l - len(labels)))
         assert len(input_ids)==len(labels)
         return torch.LongTensor(input_ids), torch.LongTensor(labels)
+        # text1_ids,text2_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids[1:-1], self.tk(text2, max_length=80, padding='max_length', truncation=True).input_ids[1:-1]
+        # if random.random()>0.5:
+        #     text1_ids,text2_ids = text2_ids,text1_ids 
+        # text1_ids, out1_ids = self.random_mask(text1_ids)
+        # text2_ids, out2_ids = self.random_mask(text2_ids)
+        # input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
+        # labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
+        # assert len(input_ids)==len(labels)
+        # return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []
         rands = np.random.random(len(text_ids))
         idx=0
         while idx<len(rands):
-            if rands[idx]<0.1:#需要mask
+            if rands[idx]<0.2:#需要mask
                 ngram=np.random.choice([1,2,3], p=[0.7,0.2,0.1])#若要mask，进行x_gram mask的概率
                 if ngram==3 and len(rands)<7:#太大的gram不要应用于过短文本
                     ngram=2
@@ -172,7 +155,7 @@ class NgramData(BaseDataset):
                 L=idx+1
                 R=idx+ngram#最终需要mask的右边界（开）
                 while L<R and L<len(rands):
-                    rands[L]=np.random.random()*0.15#强制mask
+                    rands[L]=np.random.random()*0.2#强制mask
                     L+=1
                 idx=R
                 if idx<len(rands):
@@ -180,13 +163,13 @@ class NgramData(BaseDataset):
             idx+=1
 
         for r, i in zip(rands, text_ids):
-            if r < 0.1 * 0.8:
+            if r < 0.2 * 0.8:
                 input_ids.append(self.mask_token_id)
                 output_ids.append(i)#mask预测自己
-            elif r < 0.1 * 0.9:
+            elif r < 0.2 * 0.9:
                 input_ids.append(i)
                 output_ids.append(i)#自己预测自己
-            elif r < 0.1:
+            elif r < 0.2:
                 input_ids.append(np.random.randint(self.spNum,self.vocab_size))
                 output_ids.append(i)#随机的一个词预测自己，随机词不会从特殊符号中选取，有小概率抽到自己
             else:

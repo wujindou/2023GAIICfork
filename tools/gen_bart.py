@@ -38,7 +38,7 @@ def build_vocab(vocab_file = './vocab.txt'):
             fp.write(f'{i}\n')
 
 tokenizer = ByteLevelBPETokenizer(lowercase=True, add_prefix_space=True)
-tokenizer.train(files='./data.txt',  special_tokens=['<s>', '<pad>', '</s>', '<unk>', '<mask>'])
+tokenizer.train(files='./data.txt',  special_tokens=['<s>', '<pad>', '</s>', '<unk>', '<mask>', '10', '11'])
 tokenizer.save_model(path)
 print(tokenizer.encode(" 10").ids)
 print(tokenizer.encode("10").ids)

@@ -427,3 +427,8 @@ class NGramMaskGenerator:
         tokens[idx] = new_label
 
         return label
+
+def update_average(model, ema_model, alpha, epoch):
+    alpha = min(1 - 1 / (epoch + 1), alpha)
+    for param, ema_param in zip(model.parameters(), ema_model.parameters()):
+        ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)

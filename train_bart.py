@@ -88,9 +88,9 @@ def train():
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 12, 18, 24, 35], gamma=0.5)
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0008, epochs=conf['n_epoch'], steps_per_epoch=min(500, len(train_loader)), pct_start=0.05)
 
-    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.002)
+    awp = AWP(model, optimizer, adv_lr=0.1, adv_eps=0.001)
 
-    checkpoint.resume(file_path="./pretrain/2/model_2.pt")
+    checkpoint.resume(file_path="./pretrain/2/model_20.pt")
     start_epoch = 0
 
     logger = Logger(conf['model_dir']+'/log%d.txt'%version, 'a')
@@ -138,14 +138,14 @@ def train():
         # if epoch > 100:
         if epoch%1==0:
             checkpoint.save(conf['model_dir']+'/model_%d.pt'%epoch)
-            model.eval()
-            metrics = evaluate(model, valid_loader)
-            logger.log('valid', step.value, metrics.value())
-            if WANDB:
-                wandb.log({'valid_metric': metrics.value()})
-            writer.add_scalars('valid metric', metrics.value(), step.value)
-            checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
-            model.train()
+            # model.eval()
+            # metrics = evaluate(model, valid_loader)
+            # logger.log('valid', step.value, metrics.value())
+            # if WANDB:
+            #     wandb.log({'valid_metric': metrics.value()})
+            # writer.add_scalars('valid metric', metrics.value(), step.value)
+            # checkpoint.update(conf['model_dir']+'/model.pt', metrics = metrics.value())
+            # model.train()
 
         if WANDB:
             wandb.log({'epoch': epoch})
@@ -180,8 +180,8 @@ def inference(model_file, data_file):
             tot += 1
     fp.close()
 
-version = 1
+version = 2
 conf = Config(version)
 
 train()
-# inference('checkpoint/%d/model_5.pt'%version, conf['test_file'])
+# inference('checkpoint/%d/model_8.pt'%version, conf['test_file'])

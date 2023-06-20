@@ -110,7 +110,7 @@ class NgramData(BaseDataset):
         self.vocab_size=self.tk.vocab_size
         self.input_l = 230
         self.output_l= 80
-        self.mask_token_id = self.tk_mask_token_id
+        self.mask_token_id = self.tk.mask_token_id
 
     def __len__(self):
         return len(self.samples)

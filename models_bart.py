@@ -35,8 +35,8 @@ class CustomBartModel(nn.Module):
 class PretrainBartModel(nn.Module):
     def __init__(self, n_token, sos_id=0, pad_id=1, eos_id=2):
         super().__init__()
-        self.tokenizer = BartTokenizer.from_pretrained("./custom_pretrain")
-        self.model = BartForConditionalGeneration.from_pretrained("./custom_pretrain")
+        self.tokenizer = BartTokenizer.from_pretrained("fnlp/bart-base-chinese")
+        self.model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
 
     def forward(self, inputs, outputs=None, infer=False):
         loss = self.model(input_ids=inputs, labels=outputs)

@@ -101,45 +101,28 @@ class NgramData(BaseDataset):
     #传入句子对列表
     def __init__(self, path):
         super().__init__()
-        self.samples = pd.read_csv(path,header=None)
+        self.samples = [line.strip() for line in open(path,'r',encoding='utf-8').readlines()]
+        # self.samples = pd.read_csv(path,header=None)
         # with open(path,'r') as f:
         #     self.data = f.readlines()
-        self.tk = BartTokenizer.from_pretrained('./custom_pretrain')
+        self.tk = BartTokenizer.from_pretrained('fnlp/bart-base-chinese')
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
         self.input_l = 230
         self.output_l= 80
-        self.sos_id = 0
-        self.pad_id = 1
-        self.eos_id = 2
-        self.mask_token_id = 4
+        self.mask_token_id = self.tk_mask_token_id
 
     def __len__(self):
         return len(self.samples)
 
     def _try_getitem(self, idx):
-        text1 = self.samples.iloc[idx, 1]
-        # text2 = self.samples.iloc[idx, 1]
-        # if pd.isna(text2):
-        text1_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids[1:-1]
+        text1 = self.samples[idx]
+        text1_ids = self.tk(text1, max_length=64, padding='max_length', truncation=True).input_ids[1:-1]
         text1_ids, out1_ids = self.random_mask(text1_ids)
         input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id]
         labels = [-100] + out1_ids + [-100]
-        # if len(input_ids) < self.input_l:
-        #     input_ids.extend([self.pad_id] * (self.input_l - len(input_ids)))
-        # if len(labels) < self.input_l:
-        #     labels.extend([-100] * (self.input_l - len(labels)))
         assert len(input_ids)==len(labels)
         return torch.LongTensor(input_ids), torch.LongTensor(labels)
-        # text1_ids,text2_ids = self.tk(text1, max_length=150, padding='max_length', truncation=True).input_ids[1:-1], self.tk(text2, max_length=80, padding='max_length', truncation=True).input_ids[1:-1]
-        # if random.random()>0.5:
-        #     text1_ids,text2_ids = text2_ids,text1_ids 
-        # text1_ids, out1_ids = self.random_mask(text1_ids)
-        # text2_ids, out2_ids = self.random_mask(text2_ids)
-        # input_ids = [self.tk.cls_token_id] + text1_ids + [self.tk.sep_token_id] + text2_ids + [self.tk.sep_token_id]
-        # labels = [-100] + out1_ids + [-100] + out2_ids + [-100]
-        # assert len(input_ids)==len(labels)
-        # return torch.LongTensor(input_ids), torch.LongTensor(labels)
 
     def random_mask(self,text_ids):
         input_ids, output_ids = [], []

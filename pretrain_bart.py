@@ -34,13 +34,12 @@ def train():
     step = Step()
     checkpoint = Checkpoint(model = model, step = step)
     model = torch.nn.DataParallel(model)
-    # model.to('cuda')
     accumulation_steps = 4.
     optimizer = torch.optim.AdamW(model.parameters(), lr=conf['lr'])
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=conf['n_epoch'], steps_per_epoch=min(500, int(len(train_loader)/accumulation_steps)), pct_start=0.05)
     scaler = GradScaler()
 
-    checkpoint.resume(file_path="./pretrain/model_loss_0.3173.pt")
+    # checkpoint.resume(file_path="./pretrain/model_loss_0.3173.pt")
     start_epoch = 0
     best_loss = 100.
 
@@ -75,28 +74,8 @@ def train():
                     wandb.log({'step': step.value})
                     wandb.log({'train_loss': loss.item()*accumulation_steps, 'lr': optimizer.param_groups[0]['lr']})
 
-        # if epoch%1==0:
         if epoch%10==0:
             checkpoint.save(conf['pre_model_dir']+'/model_%d.pt'%epoch)
-            # model.eval()
-            # val_losses = []
-            # for (val_source, loss_mask, val_targets) in tqdm(val_loader):
-            #     val_source = to_device(val_source, 'cuda')
-            #     val_targets = to_device(val_targets, 'cuda')
-            #     loss_mask = to_device(loss_mask, 'cuda')
-            #     val_lm_loss = model(val_source, val_targets).loss
-            #     val_loss = DAE_loss(loss_mask, val_lm_loss)
-            #     val_losses.append(val_loss.item())
-            # val_losses = np.array(val_losses).mean()
-            # logger.log(val_losses)
-            # print("valid loss", val_losses)
-            # if WANDB:
-            #     wandb.log({'preval_loss': val_losses})
-            # if best_loss>val_losses:
-            #     print("Saving model...")
-            #     best_loss=val_losses
-            #     checkpoint.save(conf['pre_model_dir']+'/model_loss_%.4f.pt'%val_losses)
-            # model.train()
 
         if WANDB:
             wandb.log({'epoch': epoch})

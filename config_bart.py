@@ -15,7 +15,7 @@ class Config(dict):
 
         #请自己造训练测试集
         self['pretrain_file'] = 'names.txt'
-        self['preval_file'] = 'data/preval.csv'
+        self['preval_file'] = 'names.txt'
         self['train_file'] = 'data/raw.csv'
         self['valid_file'] = 'data/val_0.csv'
         self['test_file'] = 'data/preliminary_b_test.csv'

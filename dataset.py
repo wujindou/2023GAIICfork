@@ -4,7 +4,7 @@ import traceback
 import pandas as pd
 from torch.utils.data import Dataset
 from transformers import BartTokenizer
-
+from transformers import AutoTokenizer
 from utils import *
 
 
@@ -105,7 +105,7 @@ class NgramData(BaseDataset):
         # self.samples = pd.read_csv(path,header=None)
         # with open(path,'r') as f:
         #     self.data = f.readlines()
-        self.tk = BartTokenizer.from_pretrained('fnlp/bart-base-chinese')
+        self.tk = AutoTokenizer.from_pretrained('fnlp/bart-base-chinese')
         self.spNum=len(self.tk.all_special_tokens)
         self.vocab_size=self.tk.vocab_size
         self.input_l = 230

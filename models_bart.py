@@ -6,7 +6,7 @@ Created on Mon Mar 13 20:05:24 2023
 """
 import torch
 import torch.nn as nn
-from transformers import BartForConditionalGeneration, BartTokenizer
+from transformers import BartForConditionalGeneration, BertTokenizer
 
 
 class CustomBartModel(nn.Module):
@@ -15,7 +15,7 @@ class CustomBartModel(nn.Module):
         self.max_l = max_l
         self.beam_size = 5
 
-        self.tokenizer = BartTokenizer.from_pretrained('./custom_pretrain/')
+        self.tokenizer = BertTokenizer.from_pretrained('./custom_pretrain/')
         self.model = BartForConditionalGeneration.from_pretrained("./custom_pretrain/")
 
     def forward(self, inputs, attn_mask, outputs=None, infer=False):
@@ -35,7 +35,7 @@ class CustomBartModel(nn.Module):
 class PretrainBartModel(nn.Module):
     def __init__(self, n_token, sos_id=0, pad_id=1, eos_id=2):
         super().__init__()
-        self.tokenizer = BartTokenizer.from_pretrained("fnlp/bart-base-chinese")
+        self.tokenizer = BertTokenizer.from_pretrained("fnlp/bart-base-chinese")
         self.model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
 
     def forward(self, inputs, outputs=None, infer=False):
